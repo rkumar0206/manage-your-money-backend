@@ -1,0 +1,110 @@
+# General Metadata
+namespace: mym-prod
+
+# -----------------------------------------------------------------------------
+# Spring Boot Application Configuration
+# -----------------------------------------------------------------------------
+app:
+  name: backend
+  replicaCount: 1
+
+  jwt:
+    enabled: true
+    issuer: "mym-auth-service"
+    accessTokenExpirationMillis: "900000"
+    refreshTokenExpirationMillis: "604800000"
+
+  image:
+    repository: ghcr.io/rkumar0206/personallearningos-backend
+    tag: "" # Overridden dynamically in GitHub Actions
+    pullPolicy: IfNotPresent
+    containerPort: 2266
+
+  # Name of the pre-existing Kubernetes Secret on the cluster
+  existingSecret: mym-secret
+
+  # Non-sensitive Environment Variables
+  env:
+    SPRING_PROFILES_ACTIVE: prod
+
+  service:
+    type: ClusterIP
+    port: 2600
+    targetPort: 2600
+
+  # Spring Boot Actuator Health Probes
+  probes:
+    liveness:
+      path: /actuator/health/liveness
+      initialDelaySeconds: 30
+      periodSeconds: 15
+    readiness:
+      path: /actuator/health/readiness
+      initialDelaySeconds: 20
+      periodSeconds: 10
+
+  # Resource Allocation
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# -----------------------------------------------------------------------------
+# Database Configuration
+# -----------------------------------------------------------------------------
+db:
+  enabled: true
+  name: mym-postgres
+  replicaCount: 1
+
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+    containerPort: 5432
+
+  existingSecret: mym-secret
+
+  # Environment variables for PostgreSQL startup
+  # (DB password and user secrets should be referenced from existingSecret)
+  env:
+    POSTGRES_DB: manage_yr_money_db
+
+  service:
+    name: mym-db-service
+    type: ClusterIP
+    clusterIP: "None"
+    port: 5432
+    targetPort: 5432
+
+  # Persistent Volume Claim Configuration
+  persistence:
+    enabled: true
+    storageClass: "local-path"
+    accessMode: ReadWriteOnce
+    size: 5Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# -----------------------------------------------------------------------------
+# Ingress Configuration (Nginx / Cert-Manager)
+# -----------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  host: mym.rksdev.tech
+  tls:
+    enabled: true
+    secretName: mym-tls-secret

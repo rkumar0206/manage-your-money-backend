@@ -24,4 +24,43 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException e) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                e.getMessage(),
+                e.getMessage(),
+                HttpStatus.NOT_FOUND.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateResourceException(DuplicateResourceException e) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                e.getMessage(),
+                e.getMessage(),
+                HttpStatus.CONFLICT.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleOtherException(Exception e) {
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                e.getMessage(),
+                e.getMessage(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                Instant.now()
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }

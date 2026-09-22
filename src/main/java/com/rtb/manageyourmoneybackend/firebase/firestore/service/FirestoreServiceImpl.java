@@ -7,11 +7,13 @@ import com.rtb.manageyourmoneybackend.common.constant.Constants;
 import com.rtb.manageyourmoneybackend.common.enums.FirestoreCollection;
 import com.rtb.manageyourmoneybackend.common.sync.entity.SyncMetadata;
 import com.rtb.manageyourmoneybackend.common.sync.repository.SyncMetadataRepository;
-import com.rtb.manageyourmoneybackend.expense.entity.Expense;
-import com.rtb.manageyourmoneybackend.expense.repository.ExpenseRepository;
-import com.rtb.manageyourmoneybackend.expense_category.entity.ExpenseCategory;
-import com.rtb.manageyourmoneybackend.expense_category.repository.ExpenseCategoryRepository;
-import com.rtb.manageyourmoneybackend.user.UserService;
+import com.rtb.manageyourmoneybackend.firebase.firebase_expense.entity.FirebaseExpense;
+import com.rtb.manageyourmoneybackend.firebase.firebase_expense.repository.FirebaseExpenseRepository;
+import com.rtb.manageyourmoneybackend.firebase.firebase_expense_category.entity.FirebaseExpenseCategory;
+import com.rtb.manageyourmoneybackend.firebase.firebase_expense_category.repository.FirebaseExpenseCategoryRepository;
+import com.rtb.manageyourmoneybackend.firebase.payment_methods.entity.PaymentMethod;
+import com.rtb.manageyourmoneybackend.firebase.payment_methods.repository.PaymentMethodRepository;
+import com.rtb.manageyourmoneybackend.firebase.firebase_user.FirebaseUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -26,11 +28,12 @@ import java.util.List;
 @Slf4j
 public class FirestoreServiceImpl implements FirestoreService {
 
-    private final UserService userService;
+    private final FirebaseUserService firebaseUserService;
     private final Firestore firestore;
     private final SyncMetadataRepository syncMetadataRepository;
-    private final ExpenseCategoryRepository expenseCategoryRepository;
-    private final ExpenseRepository expenseRepository;
+    private final FirebaseExpenseCategoryRepository firebaseExpenseCategoryRepository;
+    private final FirebaseExpenseRepository firebaseExpenseRepository;
+    private final PaymentMethodRepository paymentMethodRepository;
 
     private static final int BATCH_SIZE = 500;
 
@@ -38,7 +41,7 @@ public class FirestoreServiceImpl implements FirestoreService {
     @Async
     public void syncCollectionData(FirestoreCollection firestoreCollection) throws FirebaseAuthException {
 
-        String uidFromToken = userService.getUidSecurityContext();
+        String uidFromToken = firebaseUserService.getUidSecurityContext();
 
         if (StringUtils.hasText(uidFromToken)) {
 
@@ -53,7 +56,7 @@ public class FirestoreServiceImpl implements FirestoreService {
             CollectionReference collection = firestore.collection(firestoreCollection.getCollectionName());
             Query query = collection.limit(BATCH_SIZE).whereEqualTo(Constants.UID, uidFromToken);
 
-            if (lastSync != null && lastSync > 0) {
+            if (firestoreCollection != FirestoreCollection.PAYMENT_METHOD && lastSync != null && lastSync > 0) {
                 query = query
                         .whereGreaterThan("modified", lastSync);
             }
@@ -85,9 +88,7 @@ public class FirestoreServiceImpl implements FirestoreService {
                     switch (firestoreCollection) {
                         case EXPENSE_CATEGORY -> saveToExpenseCategoryTable(documents);
                         case EXPENSE -> saveToExpenseTable(documents);
-
-                        case PAYMENT_METHOD -> {
-                        }
+                        case PAYMENT_METHOD -> saveToPaymentMethodTable(documents);
                     }
 
                     // 5. Update Cursor and Counters
@@ -105,36 +106,52 @@ public class FirestoreServiceImpl implements FirestoreService {
             }
 
             if (!errorOccurred) {
-                metadata.setLastSync(System.currentTimeMillis());
-                syncMetadataRepository.save(metadata);
+                if (firestoreCollection != FirestoreCollection.PAYMENT_METHOD) {
+                    metadata.setLastSync(System.currentTimeMillis());
+                    syncMetadataRepository.save(metadata);
+                }
                 log.info("Finished to sync data for firestoreCollection: {}", firestoreCollection.getCollectionName());
             }
         }
     }
 
-    private void saveToExpenseTable(List<QueryDocumentSnapshot> documents) {
+    private void saveToPaymentMethodTable(List<QueryDocumentSnapshot> documents) {
 
-        List<Expense> entities = new ArrayList<>();
+        List<PaymentMethod> entities = new ArrayList<>();
 
         for (QueryDocumentSnapshot doc : documents) {
-            Expense entity = doc.toObject(Expense.class);
+            PaymentMethod entity = doc.toObject(PaymentMethod.class);
+            if (!paymentMethodRepository.existsById(entity.getKey())) {
+                entities.add(entity);
+            }
+        }
+
+        paymentMethodRepository.saveAll(entities);
+    }
+
+    private void saveToExpenseTable(List<QueryDocumentSnapshot> documents) {
+
+        List<FirebaseExpense> entities = new ArrayList<>();
+
+        for (QueryDocumentSnapshot doc : documents) {
+            FirebaseExpense entity = doc.toObject(FirebaseExpense.class);
             entities.add(entity);
         }
 
-        expenseRepository.saveAll(entities);
+        firebaseExpenseRepository.saveAll(entities);
     }
 
     private void saveToExpenseCategoryTable(List<QueryDocumentSnapshot> documents) {
 
         // 3. Transform (Firestore -> Postgres Entity)
-        List<ExpenseCategory> entities = new ArrayList<>();
+        List<FirebaseExpenseCategory> entities = new ArrayList<>();
 
         for (QueryDocumentSnapshot doc : documents) {
-            ExpenseCategory entity = doc.toObject(ExpenseCategory.class);
+            FirebaseExpenseCategory entity = doc.toObject(FirebaseExpenseCategory.class);
             entities.add(entity);
         }
 
         // 4. Load (Save to Postgres)
-        expenseCategoryRepository.saveAll(entities);
+        firebaseExpenseCategoryRepository.saveAll(entities);
     }
 }

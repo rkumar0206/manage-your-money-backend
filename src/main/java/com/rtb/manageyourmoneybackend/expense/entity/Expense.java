@@ -1,46 +1,57 @@
 package com.rtb.manageyourmoneybackend.expense.entity;
 
+import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
+import com.rtb.manageyourmoneybackend.user.model.UserEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
-@Entity(name = "expense")
-@Data
-@AllArgsConstructor
+@Entity
+@Table(name = "expenses")
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Expense {
 
     @Id
-    @Column(name = "key", nullable = false, unique = true)
-    private String key;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(name = "amount", nullable = false)
-    private double amount;
-
-    @Column(name = "category_key", nullable = false)
-    private String categoryKey;
-
-    @Column(name = "spent_on")
+    @Column(name = "spent_on", columnDefinition = "TEXT")
     private String spentOn;
 
-    @Column(name = "payment_methods")
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "expense_payment_methods", joinColumns = @JoinColumn(name = "expense_key"))
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal amount;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
+    private ExpenseCategory category;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "payment_methods", columnDefinition = "jsonb")
     private List<String> paymentMethods;
 
-    @Column(name = "is_synced")
-    private Boolean isSynced;
+    @Column(name = "is_synced", nullable = false)
+    private boolean isSynced;
 
-    @Column(name = "uid", nullable = false)
-    private String uid;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserEntity user;
 
-    @Column(name = "created", nullable = false)
-    private Long created;
+    //@CreationTimestamp
+    @Column(name = "created", nullable = false, updatable = false)
+    private Instant created;
 
+    //@UpdateTimestamp
     @Column(name = "modified", nullable = false)
-    private Long modified;
-
+    private Instant modified;
 }

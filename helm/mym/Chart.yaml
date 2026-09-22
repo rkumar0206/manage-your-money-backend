@@ -1,0 +1,6 @@
+apiVersion: v2
+name: personallearningos
+description: Helm chart for Personal Learning OS (Spring Boot + PostgreSQL)
+type: application
+version: 0.1.0
+appVersion: "1.1.0"

@@ -1,0 +1,79 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Rationale (matches the query patterns introduced by the CRUD + search/total endpoints):
+
+        1. idx_expenses_user_id
+           Postgres does NOT auto-index FK columns (only PK/unique constraints get one),
+           and every single query in this module filters by user_id. This is the highest-value index.
+
+        2. idx_expenses_user_category
+           Composite index covering getAllByUserIdAndCategoryId, the by-category total,
+           and any /search request that supplies categoryId. Leading column is user_id so it
+           also serves plain user_id-only lookups.
+
+        3. idx_expenses_user_created
+           Covers getAll's default sort candidates and every /search request that uses a
+           date range (preset or custom) or is sorted by "created".
+
+        4. idx_expenses_spent_on_trgm (GIN + pg_trgm)
+           Speeds up the case-insensitive "contains" search on spentOn (LOWER(spent_on) LIKE '%..%'),
+           which a plain B-tree index cannot help with. Needs the pg_trgm extension.
+
+        5. idx_expenses_payment_methods_gin (GIN on jsonb)
+           Speeds up hasAnyPaymentMethod's jsonb_exists(payment_methods, ?) OR-chain filter.
+    -->
+
+    <changeSet id="20260920-01-add-expenses-user-id-index" author="rohit">
+        <createIndex indexName="idx_expenses_user_id" tableName="expenses">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260920-02-add-expenses-user-category-index" author="rohit">
+        <createIndex indexName="idx_expenses_user_category" tableName="expenses">
+            <column name="user_id"/>
+            <column name="category_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260920-03-add-expenses-user-created-index" author="rohit">
+        <createIndex indexName="idx_expenses_user_created" tableName="expenses">
+            <column name="user_id"/>
+            <column name="created" descending="true"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260920-04-add-pg-trgm-extension" author="rohit">
+        <sql>CREATE EXTENSION IF NOT EXISTS pg_trgm;</sql>
+        <rollback>
+            <sql>DROP EXTENSION IF EXISTS pg_trgm;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260920-05-add-expenses-spent-on-trgm-index" author="rohit">
+        <sql>
+            CREATE INDEX idx_expenses_spent_on_trgm
+                ON expenses USING GIN (spent_on gin_trgm_ops);
+        </sql>
+        <rollback>
+            <sql>DROP INDEX IF EXISTS idx_expenses_spent_on_trgm;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260920-06-add-expenses-payment-methods-gin-index" author="rohit">
+        <sql>
+            CREATE INDEX idx_expenses_payment_methods_gin
+                ON expenses USING GIN (payment_methods jsonb_path_ops);
+        </sql>
+        <rollback>
+            <sql>DROP INDEX IF EXISTS idx_expenses_payment_methods_gin;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

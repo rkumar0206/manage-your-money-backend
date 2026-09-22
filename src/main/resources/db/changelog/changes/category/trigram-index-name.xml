@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        The /search endpoint does a case-insensitive "contains" match on name
+        (ExpenseCategoryRepository#findByUser_IdAndNameContainingIgnoreCase, i.e.
+        ILIKE '%term%'). A plain lower(name) btree index only speeds up prefix or
+        exact matches — a leading wildcard defeats it — so this uses pg_trgm's
+        trigram GIN index instead, which Postgres's planner can use for
+        substring ILIKE queries.
+
+        Requires the pg_trgm extension, which requires superuser (or a role with
+        CREATE privilege on extensions) to install. If your hosting provider
+        restricts this (e.g. some managed DB tiers), most still allow pg_trgm
+        specifically as it's an allow-listed "trusted" extension — check your
+        provider's docs if the CREATE EXTENSION step fails.
+    -->
+    <changeSet id="add-trigram-index-expense-categories-name-search"
+               author="rtb">
+        <comment>Enable fast case-insensitive substring search on expense_categories.name</comment>
+        <sql>
+            CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+            CREATE INDEX idx_expense_categories_name_trgm ON expense_categories USING gin (lower(name) gin_trgm_ops);
+        </sql>
+        <rollback>
+            <sql>DROP INDEX IF EXISTS idx_expense_categories_name_trgm;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

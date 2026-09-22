@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Guard rail: fails fast with a readable error if duplicate (user_id, lower(name))
+        rows already exist, before the index-creation changeset below would otherwise
+        fail with an opaque DB constraint-violation error. Resolve any flagged
+        duplicates (rename/merge/delete) before this changelog can apply cleanly.
+    -->
+    <changeSet id="add-unique-constraint-expense-categories-user-name-precheck"
+               author="rtb"
+               runOnChange="false"
+               failOnError="true">
+        <preConditions onFail="HALT" onFailMessage="Duplicate (user_id, lower(name)) rows exist in expense_categories — resolve them before applying the unique constraint.">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM (
+                                         SELECT user_id, lower(name)
+                                         FROM expense_categories
+                                         GROUP BY user_id, lower(name)
+                                         HAVING COUNT(*) > 1
+                                     ) dup
+            </sqlCheck>
+        </preConditions>
+        <comment>Precondition guard for the expense_categories per-user name uniqueness constraint</comment>
+        <sql>SELECT 1</sql>
+    </changeSet>
+
+    <!--
+        Enforces case-insensitive uniqueness of expense category name per owning user
+        at the database level, backing the idempotent-create logic in
+        ExpenseCategoryServiceImpl. Liquibase's <createIndex> cannot express a
+        functional index (lower(name)), so this uses raw SQL. Assumes PostgreSQL
+        or H2; see note below for MySQL < 8.0.13.
+    -->
+    <changeSet id="add-unique-constraint-expense-categories-user-name"
+               author="rtb">
+        <comment>Enforce case-insensitive uniqueness of expense category name per user</comment>
+        <sql>
+            CREATE UNIQUE INDEX uq_expense_categories_user_id_lower_name
+                ON expense_categories (user_id, lower(name));
+        </sql>
+        <rollback>
+            <sql>DROP INDEX uq_expense_categories_user_id_lower_name;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

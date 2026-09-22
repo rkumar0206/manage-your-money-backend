@@ -2,17 +2,91 @@ spring:
   application:
     name: manage-your-money-backend
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5434/manage_yr_money_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5466/manage_yr_money_db}
     username: ${POSTGRES_USER:rtb}
     password: ${POSTGRES_PASSWORD:rtb_temp_12345}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.xml
+    default-schema: public
+    drop-first: false
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 allowedOrigins: ${ALLOWED_ORIGINS:http://localhost:4200}  # frontend host url
 
 server:
   port: 2600
+
+# ==========================================
+# 1. Swagger UI & OpenAPI Configuration
+# ==========================================
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs           # The endpoint for the raw OpenAPI JSON specification
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html       # The endpoint to access the Swagger UI dashboard
+  show-actuator: true            # Optional: Includes actuator endpoints in the Swagger UI
+
+# ==========================================
+# 2. Management (Actuator) Configuration
+# ==========================================
+management:
+  endpoints:
+    web:
+      exposure:
+        # Exposes specific actuator endpoints over HTTP.
+        # You can use "*" to expose all, but being explicit is safer for production.
+        include: "health, info, metrics, env, mappings"
+      base-path: /actuator       # Default base path for management endpoints
+
+  endpoint:
+    health:
+      # Allows viewing the full health payload (database status, disk space, etc.)
+      show-details: always       # Options: never, when_authorized, always
+      probes:
+        enabled: true
+
+unsplash:
+  api:
+    base-url: "https://api.unsplash.com"
+    access-key: ${UNSPLASH_ACCESS_KEY}
+
+jwt:
+  properties:
+    enabled: true
+    secret: "9xA4vK2mZ8bQ5wP1rT7yC3eX6nM0vK2mZ8bQ5wP1rT7yC3eX6nM0" # Use a secure 256-bit key
+    issuer: "learningos-auth-service"
+    accessTokenExpirationMillis: 900000   # 15 mins
+    refreshTokenExpirationMillis: 604800000 # 7 days
+    secureCookies: false
+    publicEndpoints:
+      - "/v3/api-docs/**"
+      - "/v3/api-docs"
+      - "/api/v1/auth/**"
+      - "/actuator/**"
+      - "/swagger-ui/**"
+    roleMappings:
+      - pattern: "/api/v1/admin/**"
+        roles: ["ADMIN"]
