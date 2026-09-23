@@ -1,0 +1,14 @@
+# I will be using the volumeClaimTemplates for db (StatefulSet)
+
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  namespace: {{ .Values.namespace | default .Release.Namespace }}
+#  name: mym-db-pvc
+#spec:
+#  storageClassName: {{ .Values.db.persistence.storageClass | quote }}
+#  accessModes:
+#    - {{ .Values.db.persistence.accessMode }}
+#  resources:
+#    requests:
+#      storage: {{ .Values.db.persistence.size }}

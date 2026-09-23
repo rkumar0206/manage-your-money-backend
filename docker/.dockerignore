@@ -1,0 +1,7 @@
+.gradle
+build
+target
+.git
+.idea
+*.log
+k8s/.env

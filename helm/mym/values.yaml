@@ -15,7 +15,7 @@ app:
     refreshTokenExpirationMillis: "604800000"
 
   image:
-    repository: ghcr.io/rkumar0206/personallearningos-backend
+    repository: ghcr.io/rkumar0206/mym-backend
     tag: "" # Overridden dynamically in GitHub Actions
     pullPolicy: IfNotPresent
     containerPort: 2266

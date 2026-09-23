@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mym-backend-config
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+data:
+  # Database Non-Sensitive Configs
+  POSTGRES_HOST: {{ .Values.db.service.name | default "mym-db-service" | quote }}
+  POSTGRES_PORT: {{ .Values.db.service.port | default "5432" | quote }}
+  POSTGRES_DB: {{ .Values.db.env.POSTGRES_DB | quote }}
+  # Dynamic JDBC Datasource URL
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://{{ .Values.db.service.name }}:{{ .Values.db.service.port }}/{{ .Values.db.env.POSTGRES_DB }}"
+
+  # SMTP Non-Sensitive Configs
+  SMTP_HOST: "smtp.gmail.com"
+  SMTP_PORT: "587"
+  SMTP_AUTH: "true"
+  SMTP_STARTTLS_ENABLE: "true"
+
+  # JWT configs
+  JWT_ISSUER: {{ .Values.app.jwt.issuer | quote }}
+  JWT_ENABLED: {{ .Values.app.jwt.enabled | quote }}
+  JWT_ACCESS_TOKEN_EXPIRATION: {{ .Values.app.jwt.accessTokenExpirationMillis | quote }}
+  JWT_REFRESH_TOKEN_EXPIRATION: {{ .Values.app.jwt.refreshTokenExpirationMillis | quote }}
