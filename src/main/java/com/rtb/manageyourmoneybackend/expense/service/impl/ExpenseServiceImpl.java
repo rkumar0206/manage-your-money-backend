@@ -1,29 +1,16 @@
 package com.rtb.manageyourmoneybackend.expense.service.impl;
 
+import com.rtb.manageyourmoneybackend.common.cache.CacheEvictionService;
+import com.rtb.manageyourmoneybackend.common.config.CacheConstants;
 import com.rtb.manageyourmoneybackend.common.exception.ResourceNotFoundException;
-import com.rtb.manageyourmoneybackend.expense.dto.CategoryBreakdownItemDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.CategoryBreakdownResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.CategoryMonthlyStatsResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.CategoryStatsResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.DailyAmountDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.DailyStatsResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.DayOfWeekAmountDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.DayOfWeekStatsResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseCreateRequestDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseSearchRequestDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseSummaryResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseUpdateRequestDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.MonthlyAmountDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.PaymentMethodAmountDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.PaymentMethodDistributionResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.TopVendorsResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.VendorAmountDTO;
+import com.rtb.manageyourmoneybackend.common.model.PageResponse;
+import com.rtb.manageyourmoneybackend.expense.dto.*;
 import com.rtb.manageyourmoneybackend.expense.entity.Expense;
 import com.rtb.manageyourmoneybackend.expense.filter.DateRangePreset;
 import com.rtb.manageyourmoneybackend.expense.mapper.ExpenseMapper;
 import com.rtb.manageyourmoneybackend.expense.repository.ExpenseRepository;
 import com.rtb.manageyourmoneybackend.expense.service.ExpenseService;
+import com.rtb.manageyourmoneybackend.expense.service.helper.ExpenseCacheDelegate;
 import com.rtb.manageyourmoneybackend.expense.specification.ExpenseSpecifications;
 import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
 import com.rtb.manageyourmoneybackend.expensecategory.repository.ExpenseCategoryRepository;
@@ -35,7 +22,8 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -43,29 +31,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.DayOfWeek;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.Month;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * NOTE: assumes {@code ExpenseCategoryRepository} (JpaRepository<ExpenseCategory, Long>)
- * and {@code UserRepository} (JpaRepository<UserEntity, Long>) already exist in the
- * respective packages. Adjust the imports if your actual package layout differs.
- */
+import static com.rtb.manageyourmoneybackend.common.util.CommonAppUtil.toBigDecimal;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ExpenseServiceImpl implements ExpenseService {
 
     private final ExpenseRepository expenseRepository;
@@ -73,6 +49,15 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final UserRepository userRepository;
     private final ExpenseMapper expenseMapper;
     private final EntityManager entityManager;
+    private final CacheEvictionService cacheEvictionService;
+    private final ExpenseCacheDelegate expenseCacheDelegate;
+
+    private static final String[] EXPENSE_USER_CACHES = {
+            CacheConstants.EXPENSE_BY_ID,
+            CacheConstants.EXPENSE_LIST,
+            CacheConstants.EXPENSE_AGGREGATES,
+            CacheConstants.EXPENSE_PAYMENT_METHODS
+    };
 
     @Override
     @Transactional
@@ -88,55 +73,77 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setModified(Instant.now());
 
         Expense saved = expenseRepository.save(expense);
+        evictUserCaches(userId);
         return expenseMapper.toResponseDto(saved);
     }
 
     @Override
     public ExpenseResponseDTO getById(Long userId, Long id) {
-        return expenseRepository.findResponseByIdAndUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Expense not found with id: " + id + " for current user"));
+
+        ExpenseResponseDTO dto = expenseCacheDelegate.findByIdCached(userId, id);
+
+        if (dto == null) {
+             throw new ResourceNotFoundException("Expense not found with id: " + id + " for current user");
+        }
+
+        return dto;
     }
 
     @Override
-    public Page<ExpenseResponseDTO> getAll(Long userId, Pageable pageable) {
-        return expenseRepository.findAllResponsesByUserId(userId, pageable);
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_LIST,
+            key = "#userId + ':page:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
+    public PageResponse<ExpenseResponseDTO> getAll(Long userId, Pageable pageable) {
+        return PageResponse.fromPage(expenseRepository.findAllResponsesByUserId(userId, pageable));
     }
 
     @Override
-    public Page<ExpenseResponseDTO> getAllByUserIdAndCategoryId(Long userId, Long categoryId, Pageable pageable) {
-        return expenseRepository.findAllResponsesByUserIdAndCategoryId(userId, categoryId, pageable);
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_LIST,
+            key = "#userId + ':cat:' + #categoryId + ':page:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
+    public PageResponse<ExpenseResponseDTO> getAllByUserIdAndCategoryId(Long userId, Long categoryId, Pageable pageable) {
+        return PageResponse.fromPage(expenseRepository.findAllResponsesByUserIdAndCategoryId(userId, categoryId, pageable));
     }
 
     @Override
-    public List<String> getDistinctPaymentMethods(Long userId) {
-        return expenseRepository.findPaymentMethodsByUserId(userId).stream()
-                .filter(Objects::nonNull)
-                .flatMap(List::stream)
-                .filter(method -> method != null && !method.isBlank())
-                .collect(Collectors.toCollection(TreeSet::new))
-                .stream()
-                .toList();
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_PAYMENT_METHODS, key = "#userId")
+    public PaymentMethodsResponse getDistinctPaymentMethods(Long userId) {
+        return new PaymentMethodsResponse(
+                expenseRepository.findPaymentMethodsByUserId(userId).stream()
+                        .filter(Objects::nonNull)
+                        .flatMap(List::stream)
+                        .filter(method -> method != null && !method.isBlank())
+                        .collect(Collectors.toCollection(TreeSet::new))
+                        .stream()
+                        .toList()
+        );
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES, key = "#userId + ':total-cat:' + #categoryId")
     public BigDecimal getTotalAmountSpentByCategoryId(Long userId, Long categoryId) {
         return expenseRepository.sumAmountByUserIdAndCategoryId(userId, categoryId);
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES, key = "#userId + ':total'")
     public BigDecimal getTotalAmountSpentByUserId(Long userId) {
         return expenseRepository.sumAmountByUserId(userId);
     }
 
     @Override
-    public Page<ExpenseResponseDTO> search(Long userId, ExpenseSearchRequestDTO criteria, Pageable pageable) {
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_LIST,
+            key = "#userId + ':search:' + #criteria.toString() + ':page:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
+    public PageResponse<ExpenseResponseDTO> search(Long userId, ExpenseSearchRequestDTO criteria, Pageable pageable) {
         Specification<Expense> spec = ExpenseSpecifications.build(userId, criteria, true);
-        return expenseRepository.findAll(spec, pageable)
-                .map(expenseMapper::toResponseDto);
+        return PageResponse.fromPage(
+                expenseRepository.findAll(spec, pageable)
+                        .map(expenseMapper::toResponseDto)
+        );
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES,
+            key = "#userId + ':total-search:' + #criteria.toString()"
+    )
     public BigDecimal getTotalAmountSpentBySearchCriteria(Long userId, ExpenseSearchRequestDTO criteria) {
         Specification<Expense> spec = ExpenseSpecifications.build(userId, criteria, false);
 
@@ -154,6 +161,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES,
+            key = "#userId + ':cat-range:' + #categoryId + ':' + #dateRangePreset + ':' + #paymentMethods")
     public CategoryStatsResponseDTO getCategoryTotalForDateRange(
             Long userId, Long categoryId, DateRangePreset dateRangePreset, List<String> paymentMethods) {
         ExpenseSearchRequestDTO criteria = ExpenseSearchRequestDTO.builder()
@@ -172,6 +181,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES,
+            key = "#userId + ':monthly:' + #year + ':' + #categoryId + ':' + #paymentMethods")
     public CategoryMonthlyStatsResponseDTO getMonthlyTotalsForYear(
             Long userId, int year, Long categoryId, List<String> paymentMethods) {
         ZoneId zone = ZoneId.systemDefault();
@@ -209,6 +220,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES,
+            key = "#userId + ':breakdown:' + #dateRangePreset + ':' + #topN")
     public CategoryBreakdownResponseDTO getCategoryBreakdown(Long userId, DateRangePreset dateRangePreset, Integer topN) {
         Instant[] range = (dateRangePreset != null ? dateRangePreset : DateRangePreset.ALL_TIME).resolve();
 
@@ -266,6 +279,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES,
+            key = "#userId + ':pm-dist:' + #dateRangePreset")
     public PaymentMethodDistributionResponseDTO getPaymentMethodDistribution(Long userId, DateRangePreset dateRangePreset) {
         Instant[] range = (dateRangePreset != null ? dateRangePreset : DateRangePreset.ALL_TIME).resolve();
 
@@ -284,6 +299,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES,
+            key = "#userId + ':dow:' + #dateRangePreset")
     public DayOfWeekStatsResponseDTO getDayOfWeekStats(Long userId, DateRangePreset dateRangePreset) {
         Instant[] range = (dateRangePreset != null ? dateRangePreset : DateRangePreset.ALL_TIME).resolve();
 
@@ -316,6 +333,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES,
+            key = "#userId + ':top-vendors:' + #dateRangePreset + ':' + #limit")
     public TopVendorsResponseDTO getTopVendors(Long userId, DateRangePreset dateRangePreset, int limit) {
         Instant[] range = (dateRangePreset != null ? dateRangePreset : DateRangePreset.ALL_TIME).resolve();
 
@@ -335,6 +354,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES,
+            key = "#userId + ':summary:' + #dateRangePreset")
     public ExpenseSummaryResponseDTO getSummary(Long userId, DateRangePreset dateRangePreset) {
         Instant[] range = (dateRangePreset != null ? dateRangePreset : DateRangePreset.ALL_TIME).resolve();
         Object[] result = expenseRepository.findSummary(userId, range[0], range[1]);
@@ -358,22 +379,9 @@ public class ExpenseServiceImpl implements ExpenseService {
                 .build();
     }
 
-    /**
-     * JPQL's avg(...) return type isn't guaranteed to be BigDecimal across every
-     * Hibernate version (it can come back as Double), so this normalizes whatever
-     * Number comes back into a BigDecimal via its String form, rather than risking
-     * precision loss from a Double->BigDecimal cast.
-     */
-    private BigDecimal toBigDecimal(Object value) {
-        return switch (value) {
-            case null -> BigDecimal.ZERO;
-            case BigDecimal bd -> bd;
-            case Number num -> BigDecimal.valueOf(num.doubleValue());
-            default -> new BigDecimal(value.toString());
-        };
-    }
-
     @Override
+    @Cacheable(cacheNames = CacheConstants.EXPENSE_AGGREGATES,
+            key = "#userId + ':daily:' + #year")
     public DailyStatsResponseDTO getDailyStats(Long userId, int year) {
         ZoneId zone = ZoneId.systemDefault();
         LocalDate startDate = LocalDate.of(year, 1, 1);
@@ -423,6 +431,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setModified(Instant.now());
 
         Expense updated = expenseRepository.save(expense);
+        evictUserCaches(userId);
         return expenseMapper.toResponseDto(updated);
     }
 
@@ -433,6 +442,7 @@ public class ExpenseServiceImpl implements ExpenseService {
             throw new ResourceNotFoundException("Expense not found with id: " + id + " for current user");
         }
         expenseRepository.deleteById(id);
+        evictUserCaches(userId);
     }
 
     private Expense findOwnedOrThrow(Long userId, Long id) {
@@ -445,5 +455,13 @@ public class ExpenseServiceImpl implements ExpenseService {
         return expenseCategoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "ExpenseCategory not found with id: " + categoryId));
+    }
+
+    private void evictUserCaches(Long userId) {
+        try {
+            cacheEvictionService.evictByUser(userId, EXPENSE_USER_CACHES);
+        } catch (Exception ex) {
+            log.warn("Cache eviction failed for userId={}: {}", userId, ex.getMessage());
+        }
     }
 }

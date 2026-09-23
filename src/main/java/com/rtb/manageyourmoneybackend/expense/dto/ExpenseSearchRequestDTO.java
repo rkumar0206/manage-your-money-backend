@@ -4,11 +4,7 @@ import com.rtb.manageyourmoneybackend.expense.filter.AmountFilterOperator;
 import com.rtb.manageyourmoneybackend.expense.filter.DateRangePreset;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -28,6 +24,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @Schema(description = "Filter criteria for searching expenses")
+@EqualsAndHashCode
 public class ExpenseSearchRequestDTO {
 
     @Schema(description = "Case-insensitive partial match against spentOn", example = "grocery")

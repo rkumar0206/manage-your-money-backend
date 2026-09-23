@@ -1,19 +1,8 @@
 package com.rtb.manageyourmoneybackend.expense.service;
 
-import com.rtb.manageyourmoneybackend.expense.dto.CategoryBreakdownResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.CategoryMonthlyStatsResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.CategoryStatsResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.DailyStatsResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.DayOfWeekStatsResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseCreateRequestDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseSearchRequestDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseSummaryResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.ExpenseUpdateRequestDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.PaymentMethodDistributionResponseDTO;
-import com.rtb.manageyourmoneybackend.expense.dto.TopVendorsResponseDTO;
+import com.rtb.manageyourmoneybackend.common.model.PageResponse;
+import com.rtb.manageyourmoneybackend.expense.dto.*;
 import com.rtb.manageyourmoneybackend.expense.filter.DateRangePreset;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
@@ -25,9 +14,9 @@ public interface ExpenseService {
 
     ExpenseResponseDTO getById(Long userId, Long id);
 
-    Page<ExpenseResponseDTO> getAll(Long userId, Pageable pageable);
+    PageResponse<ExpenseResponseDTO> getAll(Long userId, Pageable pageable);
 
-    Page<ExpenseResponseDTO> getAllByUserIdAndCategoryId(Long userId, Long categoryId, Pageable pageable);
+    PageResponse<ExpenseResponseDTO> getAllByUserIdAndCategoryId(Long userId, Long categoryId, Pageable pageable);
 
     ExpenseResponseDTO update(Long userId, Long id, ExpenseUpdateRequestDTO request);
 
@@ -37,7 +26,7 @@ public interface ExpenseService {
      * Returns the distinct, sorted set of payment methods used across
      * all of the current user's expenses.
      */
-    List<String> getDistinctPaymentMethods(Long userId);
+    PaymentMethodsResponse getDistinctPaymentMethods(Long userId);
 
     /**
      * Total amount spent by the user within a single category. Returns
@@ -54,7 +43,7 @@ public interface ExpenseService {
     /**
      * Dynamic filtered search over the current user's expenses.
      */
-    Page<ExpenseResponseDTO> search(Long userId, ExpenseSearchRequestDTO criteria, Pageable pageable);
+    PageResponse<ExpenseResponseDTO> search(Long userId, ExpenseSearchRequestDTO criteria, Pageable pageable);
 
     /**
      * Total amount for the same filters as {@link #search}, unpaginated.

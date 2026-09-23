@@ -70,7 +70,7 @@ public class ExpenseCategoryController {
             @ApiResponse(responseCode = "200", description = "Page of categories retrieved successfully")
     })
     public ResponseEntity<Page<ExpenseCategoryResponseDTO>> getAll(@CurrentUserId Long userId, Pageable pageable) {
-        return ResponseEntity.ok(expenseCategoryService.getAll(userId, pageable));
+        return ResponseEntity.ok(expenseCategoryService.getAll(userId, pageable).toPage());
     }
 
     @GetMapping("/search")
@@ -85,7 +85,7 @@ public class ExpenseCategoryController {
             @Parameter(description = "Search text matched case-insensitively, anywhere in the name", required = true, example = "groc")
             @RequestParam @NotBlank(message = "name must not be blank") String name,
             Pageable pageable) {
-        return ResponseEntity.ok(expenseCategoryService.search(userId, name, pageable));
+        return ResponseEntity.ok(expenseCategoryService.search(userId, name, pageable).toPage());
     }
 
     @PutMapping("/{id}")

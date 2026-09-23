@@ -1,7 +1,10 @@
-package com.rtb.manageyourmoneybackend.expensecategory.service;
+package com.rtb.manageyourmoneybackend.expensecategory.service.impl;
 
+import com.rtb.manageyourmoneybackend.common.cache.CacheEvictionService;
+import com.rtb.manageyourmoneybackend.common.config.CacheConstants;
 import com.rtb.manageyourmoneybackend.common.exception.DuplicateResourceException;
 import com.rtb.manageyourmoneybackend.common.exception.ResourceNotFoundException;
+import com.rtb.manageyourmoneybackend.common.model.PageResponse;
 import com.rtb.manageyourmoneybackend.expense.dto.CategoryExpenseSummary;
 import com.rtb.manageyourmoneybackend.expense.repository.ExpenseRepository;
 import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryCreateRequestDTO;
@@ -11,9 +14,14 @@ import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryUpdateR
 import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
 import com.rtb.manageyourmoneybackend.expensecategory.mapper.ExpenseCategoryMapper;
 import com.rtb.manageyourmoneybackend.expensecategory.repository.ExpenseCategoryRepository;
+import com.rtb.manageyourmoneybackend.expensecategory.service.ExpenseCategoryService;
 import com.rtb.manageyourmoneybackend.user.model.UserEntity;
 import com.rtb.manageyourmoneybackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,12 +46,19 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
 
     private final ExpenseCategoryRepository expenseCategoryRepository;
     private final UserRepository userRepository;
     private final ExpenseCategoryMapper expenseCategoryMapper;
     private final ExpenseRepository expenseRepository;
+    private final CacheEvictionService cacheEvictionService;
+
+    private static final String[] CATEGORY_USER_CACHES = {
+            CacheConstants.EXPENSE_CATEGORY_BY_ID,
+            CacheConstants.EXPENSE_CATEGORY_LIST
+    };
 
     @Override
     @Transactional
@@ -80,6 +95,7 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
             ExpenseCategory saved = expenseCategoryRepository.save(entity);
             ExpenseCategoryResponseDTO responseDto = expenseCategoryMapper.toResponseDto(saved);
             responseDto.setTotalExpenseAmount(BigDecimal.valueOf(0.0));
+            evictUserCaches(userId);
             return new ExpenseCategoryCreateResult(responseDto, true);
         } catch (DataIntegrityViolationException ex) {
             // Two concurrent requests raced past the check above; if the DB enforces
@@ -96,6 +112,11 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     }
 
     @Override
+    @Cacheable(
+            cacheNames = CacheConstants.EXPENSE_CATEGORY_BY_ID,
+            key = "#userId + ':' + #id",
+            condition = "#userId != null && #id != null"
+    )
     public ExpenseCategoryResponseDTO getById(Long id, Long userId) {
         ExpenseCategory entity = findEntityOrThrow(id, userId);
         ExpenseCategoryResponseDTO responseDto = expenseCategoryMapper.toResponseDto(entity);
@@ -104,30 +125,40 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     }
 
     @Override
-    public Page<ExpenseCategoryResponseDTO> getAll(Long userId, Pageable pageable) {
+    @Cacheable(
+            cacheNames = CacheConstants.EXPENSE_CATEGORY_LIST,
+            key = "#userId + ':page:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()"
+    )
+    public PageResponse<ExpenseCategoryResponseDTO> getAll(Long userId, Pageable pageable) {
         Page<ExpenseCategory> page = (userId != null)
                 ? expenseCategoryRepository.findAllByUser_Id(userId, pageable)
                 : expenseCategoryRepository.findAll(pageable);
 
         Page<ExpenseCategoryResponseDTO> responses = page.map(expenseCategoryMapper::toResponseDto);
         addTotalSumAmountToTheCategories(userId, responses);
-        return responses;
+        return PageResponse.fromPage(responses);
     }
 
     @Override
-    public Page<ExpenseCategoryResponseDTO> search(Long userId, String name, Pageable pageable) {
+    @Cacheable(
+            cacheNames = CacheConstants.EXPENSE_CATEGORY_LIST,
+            key = "#userId + ':search:name=' + (#name == null ? '' : #name) "
+                    + "+ ':page:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()"
+    )
+    public PageResponse<ExpenseCategoryResponseDTO> search(Long userId, String name, Pageable pageable) {
         String query = normalizeName(name);
         Page<ExpenseCategoryResponseDTO> responses = expenseCategoryRepository.findByUser_IdAndNameContainingIgnoreCase(userId, query, pageable)
                 .map(expenseCategoryMapper::toResponseDto);
 
         addTotalSumAmountToTheCategories(userId, responses);
 
-        return responses;
+        return PageResponse.fromPage(responses);
     }
 
 
     @Override
     @Transactional
+    @CachePut(value = "expense_category", key = "#userId + ':' + #id")
     public ExpenseCategoryResponseDTO update(Long id, Long userId, ExpenseCategoryUpdateRequestDTO request) {
         ExpenseCategory entity = findEntityOrThrow(id, userId);
 
@@ -152,16 +183,19 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
         ExpenseCategory saved = expenseCategoryRepository.save(entity);
         ExpenseCategoryResponseDTO responseDto = expenseCategoryMapper.toResponseDto(saved);
         responseDto.setTotalExpenseAmount(expenseRepository.sumAmountByUserIdAndCategoryId(userId, responseDto.getId()));
+        evictUserCaches(userId);
         return responseDto;
     }
 
     @Override
     @Transactional
+    @CacheEvict(value = "expense_category", key = "#userId + ':' + #id")
     public void delete(Long id, Long userId) {
         if (!expenseCategoryRepository.existsByIdAndUser_Id(id, userId)) {
             throw ResourceNotFoundException.of("ExpenseCategory", id);
         }
         expenseCategoryRepository.deleteById(id);
+        evictUserCaches(userId);
     }
 
     private ExpenseCategory findEntityOrThrow(Long id, Long userId) {
@@ -191,5 +225,13 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
         List<CategoryExpenseSummary> categoryExpenseSummaries = expenseRepository.sumAmountByUserIdGroupedByCategory(userId);
         return categoryExpenseSummaries.stream()
                 .collect(Collectors.toMap(CategoryExpenseSummary::categoryId, CategoryExpenseSummary::totalAmount));
+    }
+
+    private void evictUserCaches(Long userId) {
+        try {
+            cacheEvictionService.evictByUser(userId, CATEGORY_USER_CACHES);
+        } catch (Exception ex) {
+            log.warn("Category cache eviction failed for userId={}: {}", userId, ex.getMessage());
+        }
     }
 }

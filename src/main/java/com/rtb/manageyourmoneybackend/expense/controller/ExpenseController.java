@@ -2,7 +2,6 @@ package com.rtb.manageyourmoneybackend.expense.controller;
 
 import com.rksdev.security.web.CurrentUserId;
 import com.rtb.manageyourmoneybackend.expense.dto.*;
-import com.rtb.manageyourmoneybackend.expense.filter.DateRangePreset;
 import com.rtb.manageyourmoneybackend.expense.service.ExpenseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/expenses")
@@ -60,7 +58,7 @@ public class ExpenseController {
     public ResponseEntity<Page<ExpenseResponseDTO>> getAll(
             @CurrentUserId Long userId,
             Pageable pageable) {
-        return ResponseEntity.ok(expenseService.getAll(userId, pageable));
+        return ResponseEntity.ok(expenseService.getAll(userId, pageable).toPage());
     }
 
     @GetMapping("/by-category/{categoryId}")
@@ -71,7 +69,7 @@ public class ExpenseController {
             @Parameter(description = "Id of the category to filter expenses by", required = true)
             @PathVariable Long categoryId,
             Pageable pageable) {
-        return ResponseEntity.ok(expenseService.getAllByUserIdAndCategoryId(userId, categoryId, pageable));
+        return ResponseEntity.ok(expenseService.getAllByUserIdAndCategoryId(userId, categoryId, pageable).toPage());
     }
 
     @GetMapping("/total")
@@ -106,7 +104,7 @@ public class ExpenseController {
             @CurrentUserId Long userId,
             @Valid @RequestBody ExpenseSearchRequestDTO criteria,
             Pageable pageable) {
-        return ResponseEntity.ok(expenseService.search(userId, criteria, pageable));
+        return ResponseEntity.ok(expenseService.search(userId, criteria, pageable).toPage());
     }
 
     @PostMapping("/search/total")
@@ -149,7 +147,7 @@ public class ExpenseController {
     @GetMapping("/payment-methods")
     @Operation(summary = "Get the distinct payment methods used across the current user's expenses")
     @ApiResponse(responseCode = "200", description = "Payment methods retrieved successfully")
-    public ResponseEntity<List<String>> getDistinctPaymentMethods(@CurrentUserId Long userId) {
+    public ResponseEntity<PaymentMethodsResponse> getDistinctPaymentMethods(@CurrentUserId Long userId) {
         return ResponseEntity.ok(expenseService.getDistinctPaymentMethods(userId));
     }
 }

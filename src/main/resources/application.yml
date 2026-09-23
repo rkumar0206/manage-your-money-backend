@@ -31,6 +31,22 @@ spring:
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:rtb_temp_12345}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 16
+          min-idle: 4
+          max-wait: 1000ms
+          enabled: true
+        shutdown-timeout: 200ms
+  cache:
+    type: redis
 
 allowedOrigins: ${ALLOWED_ORIGINS:http://localhost:4200}  # frontend host url
 
