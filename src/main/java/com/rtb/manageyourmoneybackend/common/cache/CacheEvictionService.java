@@ -1,6 +1,5 @@
 package com.rtb.manageyourmoneybackend.common.cache;
 
-import com.rtb.manageyourmoneybackend.common.config.RedisCacheConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.Cursor;

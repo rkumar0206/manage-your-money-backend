@@ -1,10 +1,15 @@
-package com.rtb.manageyourmoneybackend.common.config;
+package com.rtb.manageyourmoneybackend.common.cache;
 
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.CacheErrorHandler;
@@ -18,56 +23,73 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.Map;
 
-import static com.rtb.manageyourmoneybackend.common.config.CacheConstants.*;
 
-
+@Slf4j
 @Configuration(proxyBeanMethods = false)
 @EnableCaching
+@EnableConfigurationProperties(CacheProperties.class)
+@RequiredArgsConstructor
 public class RedisCacheConfig implements CachingConfigurer {
 
     /**
      * Cache key prefix used by Spring's RedisCacheManager.
      */
     public static final String CACHE_KEY_PREFIX = "manageyourmoneybackend::";
+    private final CacheProperties cacheProperties;
 
-    @Bean
-    public RedisCacheConfiguration defaultCacheConfiguration() {
+    /** Plain, deterministic cache ObjectMapper with JSR-310 + default typing. */
+    private ObjectMapper cacheObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         mapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY);
+        return mapper;
+    }
 
+    @Bean
+    public RedisCacheConfiguration defaultCacheConfiguration() {
         return RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(30))
-                //.disableCachingNullValues()
+                .entryTtl(cacheProperties.getDefaultTtl())
+                .disableCachingNullValues()
                 .serializeKeysWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(new GenericJackson2JsonRedisSerializer(mapper)))
+                        .fromSerializer(new GenericJackson2JsonRedisSerializer(cacheObjectMapper())))
                 .computePrefixWith(cacheName -> CACHE_KEY_PREFIX + cacheName + "::");
     }
 
     @Bean
-    public RedisCacheManager cacheManager(RedisConnectionFactory cf,
-                                          RedisCacheConfiguration defaultCacheConfiguration) {
-        return RedisCacheManager.builder(cf)
-                .cacheDefaults(defaultCacheConfiguration)
-                .withCacheConfiguration(EXPENSE_CATEGORY_BY_ID, defaultCacheConfiguration.entryTtl(Duration.ofMinutes(60)))
-                .withCacheConfiguration(EXPENSE_CATEGORY_LIST, defaultCacheConfiguration.entryTtl(Duration.ofMinutes(15)))
-                .withCacheConfiguration(EXPENSE_BY_ID, defaultCacheConfiguration.entryTtl(Duration.ofMinutes(30)))
-                .withCacheConfiguration(EXPENSE_LIST, defaultCacheConfiguration.entryTtl(Duration.ofMinutes(10)))
-                .withCacheConfiguration(EXPENSE_AGGREGATES, defaultCacheConfiguration.entryTtl(Duration.ofMinutes(5)))
-                .withCacheConfiguration(EXPENSE_PAYMENT_METHODS, defaultCacheConfiguration.entryTtl(Duration.ofHours(1)))
-                .enableStatistics()
-                .build();
+    public RedisCacheManager cacheManager(RedisConnectionFactory cf, RedisCacheConfiguration base) {
+
+        var builder = RedisCacheManager.builder(cf).cacheDefaults(base);
+
+        // Apply per-cache TTLs from application.yml
+        for (Map.Entry<String, Duration> entry : cacheProperties.getTtls().entrySet()) {
+            String name = entry.getKey();
+            Duration ttl = entry.getValue();
+
+            if (!CacheNameConstants.ALL.contains(name)) {
+                throw new IllegalStateException(
+                        "Unknown cache name in app.cache.ttls: '" + name + "'. "
+                                + "Known caches: " + CacheNameConstants.ALL);
+            }
+            log.info("Cache TTL override: {} -> {}", name, ttl);
+            builder.withCacheConfiguration(name, base.entryTtl(ttl));
+        }
+
+        if (cacheProperties.isEnableStatistics()) {
+            builder.enableStatistics();
+        }
+
+        return builder.build();
     }
 
-    /**
-     * Redis-down resilience: register our custom error handler.
-     */
     @Override
     public CacheErrorHandler errorHandler() {
         return new RedisCacheErrorHandler();

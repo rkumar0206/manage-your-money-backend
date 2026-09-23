@@ -89,6 +89,18 @@ unsplash:
     base-url: "https://api.unsplash.com"
     access-key: ${UNSPLASH_ACCESS_KEY}
 
+app:
+  cache:
+    default-ttl: 30m
+    enable-statistics: true
+    ttls:
+      expenseCategoryById: 60m
+      expenseCategoryList: 15m
+      expenseById:         30m
+      expenseList:         10m
+      expenseAggregates:    5m
+      expensePaymentMethods: 1h
+
 jwt:
   properties:
     enabled: true

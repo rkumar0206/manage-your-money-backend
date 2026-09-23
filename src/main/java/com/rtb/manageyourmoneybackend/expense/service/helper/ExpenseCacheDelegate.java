@@ -1,6 +1,6 @@
 package com.rtb.manageyourmoneybackend.expense.service.helper;
 
-import com.rtb.manageyourmoneybackend.common.config.CacheConstants;
+import com.rtb.manageyourmoneybackend.common.cache.CacheNameConstants;
 import com.rtb.manageyourmoneybackend.expense.dto.ExpenseResponseDTO;
 import com.rtb.manageyourmoneybackend.expense.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ public class ExpenseCacheDelegate {
     private final ExpenseRepository expenseRepository;
 
     @Cacheable(
-            cacheNames = CacheConstants.EXPENSE_BY_ID,
+            cacheNames = CacheNameConstants.EXPENSE_BY_ID,
             key = "#userId + ':' + #id",
             condition = "#userId != null && #id != null"
     )

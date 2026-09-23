@@ -1,4 +1,4 @@
-package com.rtb.manageyourmoneybackend.common.config;
+package com.rtb.manageyourmoneybackend.common.cache;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;

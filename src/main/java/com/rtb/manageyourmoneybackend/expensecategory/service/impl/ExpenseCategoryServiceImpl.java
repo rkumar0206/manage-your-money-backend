@@ -1,7 +1,7 @@
 package com.rtb.manageyourmoneybackend.expensecategory.service.impl;
 
 import com.rtb.manageyourmoneybackend.common.cache.CacheEvictionService;
-import com.rtb.manageyourmoneybackend.common.config.CacheConstants;
+import com.rtb.manageyourmoneybackend.common.cache.CacheNameConstants;
 import com.rtb.manageyourmoneybackend.common.exception.DuplicateResourceException;
 import com.rtb.manageyourmoneybackend.common.exception.ResourceNotFoundException;
 import com.rtb.manageyourmoneybackend.common.model.PageResponse;
@@ -56,8 +56,8 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     private final CacheEvictionService cacheEvictionService;
 
     private static final String[] CATEGORY_USER_CACHES = {
-            CacheConstants.EXPENSE_CATEGORY_BY_ID,
-            CacheConstants.EXPENSE_CATEGORY_LIST
+            CacheNameConstants.EXPENSE_CATEGORY_BY_ID,
+            CacheNameConstants.EXPENSE_CATEGORY_LIST
     };
 
     @Override
@@ -113,7 +113,7 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
 
     @Override
     @Cacheable(
-            cacheNames = CacheConstants.EXPENSE_CATEGORY_BY_ID,
+            cacheNames = CacheNameConstants.EXPENSE_CATEGORY_BY_ID,
             key = "#userId + ':' + #id",
             condition = "#userId != null && #id != null"
     )
@@ -126,7 +126,7 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
 
     @Override
     @Cacheable(
-            cacheNames = CacheConstants.EXPENSE_CATEGORY_LIST,
+            cacheNames = CacheNameConstants.EXPENSE_CATEGORY_LIST,
             key = "#userId + ':page:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()"
     )
     public PageResponse<ExpenseCategoryResponseDTO> getAll(Long userId, Pageable pageable) {
@@ -141,7 +141,7 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
 
     @Override
     @Cacheable(
-            cacheNames = CacheConstants.EXPENSE_CATEGORY_LIST,
+            cacheNames = CacheNameConstants.EXPENSE_CATEGORY_LIST,
             key = "#userId + ':search:name=' + (#name == null ? '' : #name) "
                     + "+ ':page:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()"
     )
