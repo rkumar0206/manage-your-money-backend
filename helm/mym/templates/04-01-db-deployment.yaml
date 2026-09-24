@@ -41,7 +41,7 @@ spec:
               memory: {{ .Values.db.resources.limits.memory }}
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
-              name: db-data # Must match the metadata.name in volumeClaimTemplates below
+              name: mym-db-data # Must match the metadata.name in volumeClaimTemplates below
               subPath: postgres
           readinessProbe:
             exec:
@@ -51,7 +51,7 @@ spec:
   # Kubernetes automatically creates the PVC using this template
   volumeClaimTemplates:
     - metadata:
-        name: db-data
+        name: mym-db-data
       spec:
         accessModes:
           - {{ .Values.db.persistence.accessMode | default "ReadWriteOnce" }}

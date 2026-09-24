@@ -22,3 +22,6 @@ data:
   JWT_ENABLED: {{ .Values.app.jwt.enabled | quote }}
   JWT_ACCESS_TOKEN_EXPIRATION: {{ .Values.app.jwt.accessTokenExpirationMillis | quote }}
   JWT_REFRESH_TOKEN_EXPIRATION: {{ .Values.app.jwt.refreshTokenExpirationMillis | quote }}
+
+  REDIS_HOST: {{ .Values.redis.service.name | quote}}
+  REDIS_PORT: {{ .Values.redis.containerPort | quote }}

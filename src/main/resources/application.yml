@@ -104,7 +104,7 @@ app:
 jwt:
   properties:
     enabled: true
-    secret: "9xA4vK2mZ8bQ5wP1rT7yC3eX6nM0vK2mZ8bQ5wP1rT7yC3eX6nM0" # Use a secure 256-bit key
+    secret: ${JWT_SECRET:"9xA4vK2mZ8bQ5wP1rT7yC3eX6nM0vK2mZ8bQ5wP1rT7yC3eX6nM0"} # Use a secure 256-bit key
     issuer: "learningos-auth-service"
     accessTokenExpirationMillis: 900000   # 15 mins
     refreshTokenExpirationMillis: 604800000 # 7 days

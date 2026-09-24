@@ -18,7 +18,7 @@ app:
     repository: ghcr.io/rkumar0206/mym-backend
     tag: "" # Overridden dynamically in GitHub Actions
     pullPolicy: IfNotPresent
-    containerPort: 2266
+    containerPort: 2600
 
   # Name of the pre-existing Kubernetes Secret on the cluster
   existingSecret: mym-secret
@@ -95,6 +95,47 @@ db:
       cpu: 500m
       memory: 512Mi
 
+redis:
+  image:
+    repository: redis
+    tag: "7.4-alpine"
+    pullPolicy: IfNotPresent
+  existingSecretPasswordKey: REDIS_PASSWORD
+
+  containerPort: 6379
+
+  # Your app uses Redis as a cache, so evict old keys instead of failing writes.
+  # Keep maxmemory at roughly 75% of the memory limit.
+  maxmemory: 384mb
+  maxmemoryPolicy: allkeys-lru
+
+  persistence:
+    enabled: false
+    size: 2Gi
+    storageClass: ""        # empty = cluster default
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  probes:
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    liveness:
+      initialDelaySeconds: 20
+      periodSeconds: 15
+
+  service:
+    name: mym-redis
+
+  networkPolicy:
+    enabled: true
+
 # -----------------------------------------------------------------------------
 # Ingress Configuration (Nginx / Cert-Manager)
 # -----------------------------------------------------------------------------
@@ -105,6 +146,6 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   host: mym.rksdev.tech
-  tls:
-    enabled: true
-    secretName: mym-tls-secret
+#  tls:
+#    enabled: true
+#    secretName: mym-tls-secret

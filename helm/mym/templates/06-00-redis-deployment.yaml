@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+  name: mym-redis
+  labels:
+    app: mym
+    component: mym-redis
+spec:
+  replicas: 1
+  serviceName: mym-redis
+  selector:
+    matchLabels:
+      app: mym
+      component: mym-redis
+  template:
+    metadata:
+      labels:
+        app: mym
+        component: mym-redis
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - >-
+              exec redis-server
+              --requirepass "$REDIS_PASSWORD"
+              --maxmemory {{ .Values.redis.maxmemory }}
+              --maxmemory-policy {{ .Values.redis.maxmemoryPolicy }}
+              --appendonly {{ if .Values.redis.persistence.enabled }}yes{{ else }}no{{ end }}
+              --save ""
+          ports:
+            - name: redis
+              containerPort: {{ .Values.redis.containerPort }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.existingSecret }}
+                  key: {{ .Values.redis.existingSecretPasswordKey }}
+            # lets redis-cli (used by probes) authenticate without putting the password in args
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.app.existingSecret }}
+                  key: {{ .Values.redis.existingSecretPasswordKey }}
+          resources:
+            requests:
+              cpu: {{ .Values.redis.resources.requests.cpu }}
+              memory: {{ .Values.redis.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.redis.resources.limits.cpu }}
+              memory: {{ .Values.redis.resources.limits.memory }}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+            initialDelaySeconds: {{ .Values.redis.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.redis.probes.readiness.periodSeconds }}
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+            initialDelaySeconds: {{ .Values.redis.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.redis.probes.liveness.periodSeconds }}
+            timeoutSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      {{- if not .Values.redis.persistence.enabled }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+  {{- if .Values.redis.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.redis.persistence.storageClass }}
+        storageClassName: {{ .Values.redis.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.redis.persistence.size }}
+  {{- end }}
