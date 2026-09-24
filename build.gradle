@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.rtb'
-version = '0.0.1-SNAPSHOT'
+version = '1.0.0'
 description = 'manage-your-money-backend'
 
 java {
@@ -69,7 +69,18 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
+
+    // 1. Import Testcontainers BOM
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.20.4')
+
+    // 2. Testcontainers dependencies (versions managed by BOM)
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-liquibase-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

@@ -6,7 +6,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class ManageYourMoneyBackendApplicationTests {
+class ManageYourMoneyBackendApplicationTests extends BaseIntegrationTest {
 
     @Test
     void contextLoads() {
