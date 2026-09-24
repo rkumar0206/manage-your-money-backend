@@ -12,9 +12,6 @@ metadata:
       {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className | default "nginx" }}
-  tls:
-    - hosts:
-        - {{ .Values.ingress.host | default "mym.rksdev.tech" }}
   rules:
     - host: {{ .Values.ingress.host | default "mym.rksdev.tech" }}
       http:
@@ -25,4 +22,11 @@ spec:
               service:
                 name: mym-backend-service
                 port:
-                  number: {{ .Values.app.service.port | default 2266 }}
+                  number: {{ .Values.app.service.port | default 2600 }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mym-frontend-service
+                port:
+                  number: 80
