@@ -130,6 +130,6 @@ jobs:
       # ------------------------------------------------------------------------
       - name: Deploy via Helm
         run: |
-          helm upgrade --install mym-backend ./helm/personallearningos \
+          helm upgrade --install mym-backend ./helm/mym \
             --namespace mym-prod \
             --set app.image.tag="${{ steps.get_version.outputs.APP_VERSION }}"
