@@ -40,6 +40,7 @@ public interface ExpenseCategoryMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "modified", ignore = true)
+    @Mapping(target = "synced", ignore = true)
     void updateEntityFromDto(ExpenseCategoryUpdateRequestDTO dto, @MappingTarget ExpenseCategory entity);
 
     /**
@@ -48,5 +49,6 @@ public interface ExpenseCategoryMapper {
      */
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "totalExpenseAmount", ignore = true)
+    @Mapping(target = "isSynced", source = "synced")
     ExpenseCategoryResponseDTO toResponseDto(ExpenseCategory entity);
 }

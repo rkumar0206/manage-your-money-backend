@@ -19,8 +19,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${SMTP_USERNAME}
-    password: ${SMTP_PASSWORD}
+    username: ${SMTP_USERNAME:sdkbksbskj}
+    password: ${SMTP_PASSWORD:sdkbakbkabak}
     properties:
       mail:
         smtp:
@@ -87,7 +87,7 @@ management:
 unsplash:
   api:
     base-url: "https://api.unsplash.com"
-    access-key: ${UNSPLASH_ACCESS_KEY}
+    access-key: ${UNSPLASH_ACCESS_KEY:dummy}
 
 app:
   cache:
