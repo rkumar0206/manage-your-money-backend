@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.rtb'
-version = '1.0.2'
+version = '1.0.3'
 description = 'manage-your-money-backend'
 
 java {

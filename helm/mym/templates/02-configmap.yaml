@@ -17,6 +17,9 @@ data:
   SMTP_AUTH: "true"
   SMTP_STARTTLS_ENABLE: "true"
 
+  # security
+  MAX_ACTIVE_SESSIONS: {{ .Values.app.security.maxActiveSessions | quote }}
+
   # JWT configs
   JWT_ISSUER: {{ .Values.app.jwt.issuer | quote }}
   JWT_ENABLED: {{ .Values.app.jwt.enabled | quote }}

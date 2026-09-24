@@ -1,5 +1,6 @@
 package com.rtb.manageyourmoneybackend.expensecategory.repository;
 
+import com.rtb.manageyourmoneybackend.expensecategory.dto.CategoryNameItem;
 import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
 import jakarta.persistence.QueryHint;
 import org.hibernate.jpa.HibernateHints;
@@ -8,8 +9,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -25,6 +28,11 @@ public interface ExpenseCategoryRepository extends JpaRepository<ExpenseCategory
 
     Optional<ExpenseCategory> findByUserIdAndName(Long userId, String name);
 
+    @Query("""
+            select new com.rtb.manageyourmoneybackend.expensecategory.dto.CategoryNameItem(cat.id, cat.name)
+            from ExpenseCategory cat where cat.user.id = :userId order by cat.modified desc
+    """)
+    List<CategoryNameItem> findAllCategoryNamesByUserId(@Param("userId") Long userId);
 
     /**
      * Returns a page of expense categories scoped to a single owning user —

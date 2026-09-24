@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
 
@@ -29,4 +30,12 @@ public class RefreshTokenEntity {
 
     @Column(name = "expiry_date", nullable = false)
     private Instant expiryDate;
+
+    @Builder.Default
+    @Column(name = "revoked", nullable = false)
+    private boolean revoked = false;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 }

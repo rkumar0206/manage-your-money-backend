@@ -1,10 +1,7 @@
 package com.rtb.manageyourmoneybackend.expensecategory.controller;
 
 import com.rksdev.security.web.CurrentUserId;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryCreateRequestDTO;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryCreateResult;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryResponseDTO;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryUpdateRequestDTO;
+import com.rtb.manageyourmoneybackend.expensecategory.dto.*;
 import com.rtb.manageyourmoneybackend.expensecategory.service.ExpenseCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -71,6 +68,15 @@ public class ExpenseCategoryController {
     })
     public ResponseEntity<Page<ExpenseCategoryResponseDTO>> getAll(@CurrentUserId Long userId, Pageable pageable) {
         return ResponseEntity.ok(expenseCategoryService.getAll(userId, pageable).toPage());
+    }
+
+    @GetMapping("/names")
+    @Operation(summary = "List expense category names", description = "Returns a list of expense categories for the given user.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Categories retrieved successfully")
+    })
+    public ResponseEntity<CategoryNameResponseDTO> getAllCategoryNames(@CurrentUserId Long userId) {
+        return ResponseEntity.ok(expenseCategoryService.getAllCategoryNames(userId));
     }
 
     @GetMapping("/search")

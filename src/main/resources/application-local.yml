@@ -100,6 +100,9 @@ app:
       expenseList:         10m
       expenseAggregates:    5m
       expensePaymentMethods: 1h
+      unsplashSearchResult: 24h
+  security:
+    max-active-sessions: ${MAX_ACTIVE_SESSIONS:5}
 
 jwt:
   properties:

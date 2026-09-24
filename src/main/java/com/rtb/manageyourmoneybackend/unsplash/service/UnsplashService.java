@@ -1,9 +1,12 @@
 package com.rtb.manageyourmoneybackend.unsplash.service;
 
+import com.rtb.manageyourmoneybackend.common.cache.CacheNameConstants;
 import com.rtb.manageyourmoneybackend.unsplash.data.UnsplashPhoto;
+import com.rtb.manageyourmoneybackend.unsplash.data.UnsplashResponseDTO;
 import com.rtb.manageyourmoneybackend.unsplash.data.UnsplashSearchResponse;
 import com.rtb.manageyourmoneybackend.unsplash.data.UnsplashUrls;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -27,11 +30,14 @@ public class UnsplashService {
         this.accessKey = accessKey;
     }
 
-    public List<UnsplashUrls> searchImageUrls(String keyword) {
+    @Cacheable(cacheNames = CacheNameConstants.UNSPLASH_SEARCH_RESULT, key = "#keyword")
+    public UnsplashResponseDTO searchImageUrls(String keyword) {
         return searchImageUrls(keyword, 1, 10);
     }
 
-    public List<UnsplashUrls> searchImageUrls(String keyword, int page, int perPage) {
+    @Cacheable(cacheNames = CacheNameConstants.UNSPLASH_SEARCH_RESULT,
+            key = "#keyword + ':' + #page + ':' + #perPage")
+    public UnsplashResponseDTO searchImageUrls(String keyword, int page, int perPage) {
 
         UnsplashSearchResponse response = restClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -45,12 +51,13 @@ public class UnsplashService {
                 .body(UnsplashSearchResponse.class);
 
         if (response == null || response.results() == null) {
-            return List.of();
+            return new UnsplashResponseDTO(List.of());
         }
 
         // Map the photo results directly to the 'regular' size URLs
-        return response.results().stream()
-                .map(UnsplashPhoto::urls)
-                .toList();
+        return new UnsplashResponseDTO(
+                response.results().stream()
+                        .map(UnsplashPhoto::urls)
+                        .toList());
     }
 }

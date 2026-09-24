@@ -10,4 +10,5 @@
     <include file="db/changelog/changes/category/unique-constraint-on-userid-and-name.xml"/>
     <include file="db/changelog/changes/category/trigram-index-name.xml"/>
     <include file="db/changelog/changes/expense/expense-search-indexes.xml"/>
+    <include file="db/changelog/changes/users/002-add-revoked-and-created-at-to-refresh-tokens.xml"/>
 </databaseChangeLog>

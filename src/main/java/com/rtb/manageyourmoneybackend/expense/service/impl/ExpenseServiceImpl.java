@@ -72,7 +72,9 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setCreated(request.getCreated() != null ? request.getCreated() : Instant.now());
         expense.setModified(Instant.now());
 
+        category.setModified(Instant.now());
         Expense saved = expenseRepository.save(expense);
+        expenseCategoryRepository.saveAndFlush(category);
         evictUserCaches(userId);
         return expenseMapper.toResponseDto(saved);
     }
@@ -429,6 +431,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         }
 
         expense.setModified(Instant.now());
+        expense.getCategory().setModified(Instant.now());
 
         Expense updated = expenseRepository.save(expense);
         evictUserCaches(userId);

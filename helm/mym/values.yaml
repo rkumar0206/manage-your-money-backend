@@ -18,6 +18,9 @@ app:
   name: backend
   replicaCount: 1
 
+  security:
+    maxActiveSessions: "3"
+
   jwt:
     enabled: true
     issuer: "mym-auth-service"

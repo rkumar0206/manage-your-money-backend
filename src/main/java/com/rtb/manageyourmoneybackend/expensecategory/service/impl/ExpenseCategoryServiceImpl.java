@@ -7,10 +7,7 @@ import com.rtb.manageyourmoneybackend.common.exception.ResourceNotFoundException
 import com.rtb.manageyourmoneybackend.common.model.PageResponse;
 import com.rtb.manageyourmoneybackend.expense.dto.CategoryExpenseSummary;
 import com.rtb.manageyourmoneybackend.expense.repository.ExpenseRepository;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryCreateRequestDTO;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryCreateResult;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryResponseDTO;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryUpdateRequestDTO;
+import com.rtb.manageyourmoneybackend.expensecategory.dto.*;
 import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
 import com.rtb.manageyourmoneybackend.expensecategory.mapper.ExpenseCategoryMapper;
 import com.rtb.manageyourmoneybackend.expensecategory.repository.ExpenseCategoryRepository;
@@ -137,6 +134,11 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
         Page<ExpenseCategoryResponseDTO> responses = page.map(expenseCategoryMapper::toResponseDto);
         addTotalSumAmountToTheCategories(userId, responses);
         return PageResponse.fromPage(responses);
+    }
+
+    @Override
+    public CategoryNameResponseDTO getAllCategoryNames(Long userId) {
+        return new CategoryNameResponseDTO(expenseCategoryRepository.findAllCategoryNamesByUserId(userId));
     }
 
     @Override

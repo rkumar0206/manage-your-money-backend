@@ -1,5 +1,6 @@
 package com.rtb.manageyourmoneybackend.unsplash.controller;
 
+import com.rtb.manageyourmoneybackend.unsplash.data.UnsplashResponseDTO;
 import com.rtb.manageyourmoneybackend.unsplash.data.UnsplashUrls;
 import com.rtb.manageyourmoneybackend.unsplash.service.UnsplashService;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +20,11 @@ public class ImageSearchController {
     private final UnsplashService unsplashService;
 
     @GetMapping("/search")
-    public ResponseEntity<List<UnsplashUrls>> searchImages(
+    public ResponseEntity<UnsplashResponseDTO> searchImages(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int limit) {
 
-        List<UnsplashUrls> imageUrls = unsplashService.searchImageUrls(keyword, page, limit);
-        return ResponseEntity.ok(imageUrls);
+         return ResponseEntity.ok(unsplashService.searchImageUrls(keyword, page, limit));
     }
 }

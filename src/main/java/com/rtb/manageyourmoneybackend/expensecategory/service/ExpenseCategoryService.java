@@ -1,10 +1,7 @@
 package com.rtb.manageyourmoneybackend.expensecategory.service;
 
 import com.rtb.manageyourmoneybackend.common.model.PageResponse;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryCreateRequestDTO;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryCreateResult;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryResponseDTO;
-import com.rtb.manageyourmoneybackend.expensecategory.dto.ExpenseCategoryUpdateRequestDTO;
+import com.rtb.manageyourmoneybackend.expensecategory.dto.*;
 import org.springframework.data.domain.Pageable;
 
 /**
@@ -35,6 +32,8 @@ public interface ExpenseCategoryService {
      * @param pageable pagination and sorting parameters
      */
     PageResponse<ExpenseCategoryResponseDTO> getAll(Long userId, Pageable pageable);
+
+    CategoryNameResponseDTO getAllCategoryNames(Long userId);
 
     /**
      * Searches a user's expense categories by name, case-insensitively, matching

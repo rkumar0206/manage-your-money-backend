@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="20260924-add-revoked-and-created-at-to-refresh-tokens" author="rohit">
+        <addColumn tableName="refresh_tokens">
+            <column name="revoked" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <!-- Index to optimize active session queries and lookup by token -->
+        <createIndex indexName="idx_refresh_tokens_user_active" tableName="refresh_tokens">
+            <column name="user_id"/>
+            <column name="revoked"/>
+            <column name="expiry_date"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
