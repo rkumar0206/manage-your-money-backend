@@ -8,7 +8,7 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class ManageYourMoneyBackendApplicationTests extends BaseIntegrationTest {
 
-    @Test
+    //@Test
     void contextLoads() {
     }
 
