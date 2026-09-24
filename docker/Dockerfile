@@ -7,21 +7,20 @@ FROM gradle:9.7.1-jdk25 AS build
 WORKDIR /app
 
 ARG GITHUB_ACTOR
+ARG GITHUB_TOKEN
+ENV GITHUB_ACTOR=$GITHUB_ACTOR
+ENV GITHUB_TOKEN=$GITHUB_TOKEN
 
 COPY --chown=gradle:gradle gradlew .
 COPY --chown=gradle:gradle gradle gradle
 COPY --chown=gradle:gradle build.gradle settings.gradle ./
 
-RUN --mount=type=secret,id=github_token \
-    GITHUB_ACTOR="${GITHUB_ACTOR}" \
-    GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
-    ./gradlew dependencies --no-daemon
+# Download dependencies (Cached in Docker unless build.gradle changes)
+RUN ./gradlew dependencies --no-daemon
 
+# Step B: Copy source code and build the bootable JAR
 COPY --chown=gradle:gradle src src
-RUN --mount=type=secret,id=github_token \
-    GITHUB_ACTOR="${GITHUB_ACTOR}" \
-    GITHUB_TOKEN="$(cat /run/secrets/github_token)" \
-    ./gradlew bootJar -x test --no-daemon
+RUN ./gradlew bootJar -x test --no-daemon
 
 
 # ==============================================================================
