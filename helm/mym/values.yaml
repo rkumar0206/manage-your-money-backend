@@ -1,6 +1,16 @@
 # General Metadata
 namespace: mym-prod
 
+# secrets
+secrets:
+  postgresUser: ""
+  postgresPassword: ""
+  jwtSecret: ""
+  smtpUsername: ""
+  smtpPassword: ""
+  redisPassword: ""
+  unsplashAccessKey: ""
+
 # -----------------------------------------------------------------------------
 # Spring Boot Application Configuration
 # -----------------------------------------------------------------------------

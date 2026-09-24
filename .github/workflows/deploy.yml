@@ -108,28 +108,18 @@ jobs:
         uses: azure/setup-helm@v4
 
       # ------------------------------------------------------------------------
-      # 10. Create or Update K8s Secrets (Idempotent)
-      # ------------------------------------------------------------------------
-      - name: Create or Update App Secrets
-        run: |
-          kubectl create namespace mym-prod --dry-run=client -o yaml | kubectl apply -f -
-          
-          kubectl create secret generic mym-secret \
-            --namespace=mym-prod \
-            --from-literal=POSTGRES_USER="${{ secrets.POSTGRES_USER }}" \
-            --from-literal=POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
-            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-            --from-literal=SMTP_USERNAME="${{ secrets.SMTP_USERNAME }}" \
-            --from-literal=SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}" \
-            --from-literal=REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
-            --from-literal=UNSPLASH_ACCESS_KEY="${{ secrets.UNSPLASH_ACCESS_KEY }}" \
-            --dry-run=client -o yaml | kubectl apply -f -
-
-      # ------------------------------------------------------------------------
-      # 11. Deploy via Helm
+      # 10. Deploy via Helm (Handles Namespace, Secrets, and Application)
       # ------------------------------------------------------------------------
       - name: Deploy via Helm
         run: |
           helm upgrade --install mym-backend ./helm/mym \
             --namespace mym-prod \
-            --set app.image.tag="${{ steps.get_version.outputs.APP_VERSION }}"
+            --create-namespace \
+            --set app.image.tag="${{ steps.get_version.outputs.APP_VERSION }}" \
+            --set secrets.postgresUser="${{ secrets.POSTGRES_USER }}" \
+            --set secrets.postgresPassword="${{ secrets.POSTGRES_PASSWORD }}" \
+            --set secrets.jwtSecret="${{ secrets.JWT_SECRET }}" \
+            --set secrets.smtpUsername="${{ secrets.SMTP_USERNAME }}" \
+            --set secrets.smtpPassword="${{ secrets.SMTP_PASSWORD }}" \
+            --set secrets.redisPassword="${{ secrets.REDIS_PASSWORD }}" \
+            --set secrets.unsplashAccessKey="${{ secrets.UNSPLASH_ACCESS_KEY }}"
