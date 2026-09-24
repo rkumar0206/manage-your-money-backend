@@ -22,7 +22,7 @@ public class FirebaseConfig {
                 .getClassLoader()
                 .getResourceAsStream("manageyourrenters-firebase-adminsdk-gp0sx-503e48dfa4.json");
 
-        assert serviceAccount != null;
+        //assert serviceAccount != null;
         FirebaseOptions options = FirebaseOptions.builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                 .build();
