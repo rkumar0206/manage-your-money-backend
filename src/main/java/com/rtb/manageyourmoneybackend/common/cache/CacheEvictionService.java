@@ -38,6 +38,10 @@ public class CacheEvictionService {
         }
     }
 
+    public void evictAll(Long userId) {
+        evictByUser(userId, CacheNameConstants.ALL.toArray(String[]::new));
+    }
+
     private Set<String> scan(String pattern) {
         Set<String> keys = new HashSet<>();
         ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();

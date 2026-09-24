@@ -32,7 +32,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
     Stream<Expense> streamByUserId(Long userId);
 
     @Query("""
-            SELECT CONCAT(e.category.id, ':', e.amount, ':', COALESCE(e.spentOn, ''))\s
+            SELECT CONCAT(e.category.id, ':', e.amount, ':', COALESCE(e.spentOn, ''), ':', e.created)\s
             FROM Expense e\s
             WHERE e.user.id = :userId\s
             AND e.category.id IN :categoryIds

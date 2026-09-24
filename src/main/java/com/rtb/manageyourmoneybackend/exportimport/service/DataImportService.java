@@ -3,6 +3,8 @@ package com.rtb.manageyourmoneybackend.exportimport.service;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rtb.manageyourmoneybackend.common.cache.CacheEvictionService;
+import com.rtb.manageyourmoneybackend.common.cache.CacheNameConstants;
 import com.rtb.manageyourmoneybackend.expense.entity.Expense;
 import com.rtb.manageyourmoneybackend.expense.repository.ExpenseRepository;
 import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
@@ -36,6 +38,7 @@ public class DataImportService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
+    private final CacheEvictionService cacheEvictionService;
 
     public void importUserData(Long userId, MultipartFile file) throws IOException {
         UserEntity userRef = userRepository.getReferenceById(userId);
@@ -61,6 +64,8 @@ public class DataImportService {
                     parser.skipChildren();
                 }
             }
+
+            cacheEvictionService.evictAll(userId);
         }
     }
 
@@ -185,8 +190,10 @@ public class DataImportService {
     }
 
     private String generateFingerprint(Long categoryId, ExpenseExportDto dto) {
-        return categoryId + ":" + dto.amount() + ":" +
-                (dto.spentOn() != null ? dto.spentOn() : "");
+        return categoryId + ":"
+                + dto.amount() + ":"
+                + (dto.spentOn() != null ? dto.spentOn() : "") + ":"
+                + dto.created();
     }
 
     /* ==========================================
