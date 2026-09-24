@@ -13,6 +13,6 @@ spec:
     component: mym-backend
   ports:
     - name: http
-      port: {{ .Values.app.service.port | default 2266 }}
-      targetPort: {{ .Values.app.service.targetPort | default 2266 }}
+      port: {{ .Values.app.service.port | default 2600 }}
+      targetPort: {{ .Values.app.service.targetPort | default 2600 }}
       protocol: TCP
