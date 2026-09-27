@@ -101,6 +101,7 @@ app:
       expenseAggregates:    5m
       expensePaymentMethods: 1h
       unsplashSearchResult: 24h
+      expenseDistinctSpentOn: 1h
   security:
     max-active-sessions: ${MAX_ACTIVE_SESSIONS:5}
 

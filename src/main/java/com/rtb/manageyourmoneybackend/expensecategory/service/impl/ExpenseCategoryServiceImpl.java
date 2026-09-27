@@ -5,6 +5,7 @@ import com.rtb.manageyourmoneybackend.common.cache.CacheNameConstants;
 import com.rtb.manageyourmoneybackend.common.exception.DuplicateResourceException;
 import com.rtb.manageyourmoneybackend.common.exception.ResourceNotFoundException;
 import com.rtb.manageyourmoneybackend.common.model.PageResponse;
+import com.rtb.manageyourmoneybackend.common.util.CommonAppUtil;
 import com.rtb.manageyourmoneybackend.expense.dto.CategoryExpenseSummary;
 import com.rtb.manageyourmoneybackend.expense.repository.ExpenseRepository;
 import com.rtb.manageyourmoneybackend.expensecategory.dto.*;
@@ -61,6 +62,8 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     @Transactional
     public ExpenseCategoryCreateResult create(Long userId, ExpenseCategoryCreateRequestDTO request) {
 
+        CommonAppUtil.validateIdField(userId, "userId");
+
         String normalizedName = normalizeName(request.getName());
 
         // Idempotency check: a category with this name (case-insensitive) already
@@ -115,6 +118,8 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
             condition = "#userId != null && #id != null"
     )
     public ExpenseCategoryResponseDTO getById(Long id, Long userId) {
+        CommonAppUtil.validateIdField(userId, "userId");
+        CommonAppUtil.validateIdField(id, "id");
         ExpenseCategory entity = findEntityOrThrow(id, userId);
         ExpenseCategoryResponseDTO responseDto = expenseCategoryMapper.toResponseDto(entity);
         responseDto.setTotalExpenseAmount(expenseRepository.sumAmountByUserIdAndCategoryId(userId, id));
@@ -127,9 +132,9 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
             key = "#userId + ':page:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()"
     )
     public PageResponse<ExpenseCategoryResponseDTO> getAll(Long userId, Pageable pageable) {
-        Page<ExpenseCategory> page = (userId != null)
-                ? expenseCategoryRepository.findAllByUser_Id(userId, pageable)
-                : expenseCategoryRepository.findAll(pageable);
+        CommonAppUtil.validateIdField(userId, "userId");
+
+        Page<ExpenseCategory> page = expenseCategoryRepository.findAllByUser_Id(userId, pageable);
 
         Page<ExpenseCategoryResponseDTO> responses = page.map(expenseCategoryMapper::toResponseDto);
         addTotalSumAmountToTheCategories(userId, responses);
@@ -138,6 +143,7 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
 
     @Override
     public CategoryNameResponseDTO getAllCategoryNames(Long userId) {
+        CommonAppUtil.validateIdField(userId, "userId");
         return new CategoryNameResponseDTO(expenseCategoryRepository.findAllCategoryNamesByUserId(userId));
     }
 
@@ -148,6 +154,9 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
                     + "+ ':page:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()"
     )
     public PageResponse<ExpenseCategoryResponseDTO> search(Long userId, String name, Pageable pageable) {
+
+        CommonAppUtil.validateIdField(userId, "userId");
+
         String query = normalizeName(name);
         Page<ExpenseCategoryResponseDTO> responses = expenseCategoryRepository.findByUser_IdAndNameContainingIgnoreCase(userId, query, pageable)
                 .map(expenseCategoryMapper::toResponseDto);
@@ -162,6 +171,10 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     @Transactional
     @CachePut(value = "expense_category", key = "#userId + ':' + #id")
     public ExpenseCategoryResponseDTO update(Long id, Long userId, ExpenseCategoryUpdateRequestDTO request) {
+
+        CommonAppUtil.validateIdField(userId, "userId");
+        CommonAppUtil.validateIdField(id, "id");
+
         ExpenseCategory entity = findEntityOrThrow(id, userId);
 
         String normalizedName = normalizeName(request.getName());
@@ -193,6 +206,9 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     @Transactional
     @CacheEvict(value = "expense_category", key = "#userId + ':' + #id")
     public void delete(Long id, Long userId) {
+        CommonAppUtil.validateIdField(userId, "userId");
+        CommonAppUtil.validateIdField(id, "id");
+
         if (!expenseCategoryRepository.existsByIdAndUser_Id(id, userId)) {
             throw ResourceNotFoundException.of("ExpenseCategory", id);
         }

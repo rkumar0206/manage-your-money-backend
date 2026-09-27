@@ -1,6 +1,7 @@
 package com.rtb.manageyourmoneybackend.common.util;
 
 import java.math.BigDecimal;
+import java.security.InvalidParameterException;
 
 public class CommonAppUtil {
 
@@ -19,6 +20,13 @@ public class CommonAppUtil {
             case Number num -> BigDecimal.valueOf(num.doubleValue());
             default -> new BigDecimal(value.toString());
         };
+    }
+
+    public static void validateIdField(Long id, String fieldName) {
+
+        if (id == null || id <= 0) {
+            throw new InvalidParameterException("%s must not be null or negative".formatted(fieldName));
+        }
     }
 
 }

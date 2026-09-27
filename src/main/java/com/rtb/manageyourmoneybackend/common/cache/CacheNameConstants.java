@@ -14,6 +14,7 @@ public final class CacheNameConstants {
     public static final String EXPENSE_LIST        = "expenseList";
     public static final String EXPENSE_AGGREGATES  = "expenseAggregates";
     public static final String EXPENSE_PAYMENT_METHODS = "expensePaymentMethods";
+    public static final String EXPENSE_DISTINCT_SPENT_ON =  "expenseDistinctSpentOn";
 
     // Unsplash
     public static final String UNSPLASH_SEARCH_RESULT = "unsplashSearchResult";
@@ -26,6 +27,7 @@ public final class CacheNameConstants {
             EXPENSE_LIST,
             EXPENSE_AGGREGATES,
             EXPENSE_PAYMENT_METHODS,
+            EXPENSE_DISTINCT_SPENT_ON,
             UNSPLASH_SEARCH_RESULT
     );
 }

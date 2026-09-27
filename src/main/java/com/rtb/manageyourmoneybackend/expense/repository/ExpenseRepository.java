@@ -275,4 +275,17 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
             @Param("userId") Long userId,
             @Param("yearStart") Instant yearStart,
             @Param("yearEnd") Instant yearEnd);
+
+    @Query(
+            """ 
+                    select ex.spentOn from Expense ex
+                    where ex.user.id = :userId and ex.category.id = :categoryId
+                    group by ex.spentOn
+                    order by MAX(ex.modified) DESC
+                    """
+    )
+    List<String> findDistinctSpentOnByCategoryAndUserId(
+            @Param("userId") Long userId,
+            @Param("categoryId") Long categoryId
+    );
 }

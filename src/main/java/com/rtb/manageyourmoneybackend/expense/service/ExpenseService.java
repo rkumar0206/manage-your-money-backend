@@ -104,4 +104,6 @@ public interface ExpenseService {
      * entries depending on leap year), for a heatmap-style visualization.
      */
     DailyStatsResponseDTO getDailyStats(Long userId, int year);
+
+    DistinctSpentOnResponse getDistinctSpentOnByCategoryAndUserId(Long userId, Long categoryId);
 }

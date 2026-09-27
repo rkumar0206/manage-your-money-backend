@@ -119,6 +119,18 @@ public class ExpenseController {
         return ResponseEntity.ok(expenseService.getTotalAmountSpentBySearchCriteria(userId, criteria));
     }
 
+
+    @GetMapping("/distinct-spent-on")
+    @Operation(summary = "Get distinct spent-on list in a particular category")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Distinct SpentOn list retrieved successfully."),
+            @ApiResponse(responseCode = "400", description = "categoryId is invalid")
+    })
+    public ResponseEntity<DistinctSpentOnResponse> getDistinctSpentOn(
+            @CurrentUserId Long userId, @RequestParam("categoryId") Long categoryId) {
+        return ResponseEntity.ok(expenseService.getDistinctSpentOnByCategoryAndUserId(userId, categoryId));
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "Update an existing expense")
     @ApiResponses({

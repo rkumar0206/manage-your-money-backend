@@ -1,6 +1,5 @@
 package com.rtb.manageyourmoneybackend.common.exception;
 
-import com.google.firebase.auth.FirebaseAuthException;
 import com.rtb.manageyourmoneybackend.common.model.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.security.InvalidParameterException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,21 +21,6 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    @ExceptionHandler(FirebaseAuthException.class)
-    public ResponseEntity<ErrorResponse> handleFirebaseAuthException(FirebaseAuthException e) {
-
-        logException(e);
-
-        ErrorResponse errorResponse = new ErrorResponse(
-                "Authentication failed",
-                e.getMessage(),
-                HttpStatus.UNAUTHORIZED.value(),
-                Instant.now()
-        );
-
-        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
-    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException e) {
@@ -90,10 +75,10 @@ public class GlobalExceptionHandler {
         logException(ex);
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(
-                "Please verify your email before logging in.",
-                ex.getMessage(),
-                HttpStatus.FORBIDDEN.value(),
-                Instant.now()
+                        "Please verify your email before logging in.",
+                        ex.getMessage(),
+                        HttpStatus.FORBIDDEN.value(),
+                        Instant.now()
                 )
         );
     }
@@ -140,6 +125,19 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(InvalidParameterException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidParameterException(InvalidParameterException ex) {
+
+        logException(ex);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        ex.getMessage(),
+                        ex.getMessage(),
+                        HttpStatus.BAD_REQUEST.value(),
+                        Instant.now()
+                ));
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleOtherException(Exception e) {

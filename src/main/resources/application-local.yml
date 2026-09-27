@@ -94,13 +94,14 @@ app:
     default-ttl: 30m
     enable-statistics: true
     ttls:
-      expenseCategoryById: 60m
-      expenseCategoryList: 15m
-      expenseById:         30m
-      expenseList:         10m
+      expenseCategoryById: 20m
+      expenseCategoryList: 10m
+      expenseById:         15m
+      expenseList:         5m
       expenseAggregates:    5m
       expensePaymentMethods: 1h
-      unsplashSearchResult: 24h
+      unsplashSearchResult: 10h
+      expenseDistinctSpentOn: 30m
   security:
     max-active-sessions: ${MAX_ACTIVE_SESSIONS:5}
 
