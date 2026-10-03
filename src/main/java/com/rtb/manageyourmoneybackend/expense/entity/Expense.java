@@ -29,6 +29,9 @@ public class Expense {
     @Column(name = "spent_on", columnDefinition = "TEXT")
     private String spentOn;
 
+    @Column(nullable = false, length = 10)
+    private String currency;
+
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 

@@ -25,6 +25,8 @@ public class ExpenseResponseDTO {
     @Schema(description = "Free-text note describing what the expense was spent on")
     private String spentOn;
 
+    private String currency;
+
     @Schema(description = "Amount spent", example = "499.99")
     private BigDecimal amount;
 

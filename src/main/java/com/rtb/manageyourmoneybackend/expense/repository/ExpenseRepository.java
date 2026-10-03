@@ -59,7 +59,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
      */
     @Query("""
             select new com.rtb.manageyourmoneybackend.expense.dto.ExpenseResponseDTO(
-                e.id, e.spentOn, e.amount, c.id, c.name, e.paymentMethods,
+                e.id, e.spentOn, e.currency, e.amount, c.id, c.name, e.paymentMethods,
                 e.isSynced, e.user.id, e.created, e.modified)
             from Expense e join e.category c
             where e.id = :id and e.user.id = :userId
@@ -68,20 +68,20 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
 
     @Query(value = """
             select new com.rtb.manageyourmoneybackend.expense.dto.ExpenseResponseDTO(
-                e.id, e.spentOn, e.amount, c.id, c.name, e.paymentMethods,
+                e.id, e.spentOn, e.currency, e.amount, c.id, c.name, e.paymentMethods,
                 e.isSynced, e.user.id, e.created, e.modified)
             from Expense e join e.category c
-            where e.user.id = :userId order by e.modified desc
+            where e.user.id = :userId
             """,
             countQuery = "select count(e) from Expense e where e.user.id = :userId")
     Page<ExpenseResponseDTO> findAllResponsesByUserId(@Param("userId") Long userId, Pageable pageable);
 
     @Query(value = """
             select new com.rtb.manageyourmoneybackend.expense.dto.ExpenseResponseDTO(
-                e.id, e.spentOn, e.amount, c.id, c.name, e.paymentMethods,
+                e.id, e.spentOn, e.currency, e.amount, c.id, c.name, e.paymentMethods,
                 e.isSynced, e.user.id, e.created, e.modified)
             from Expense e join e.category c
-            where e.user.id = :userId and e.category.id = :categoryId order by e.modified desc
+            where e.user.id = :userId and e.category.id = :categoryId
             """,
             countQuery = "select count(e) from Expense e where e.user.id = :userId and e.category.id = :categoryId")
     Page<ExpenseResponseDTO> findAllResponsesByUserIdAndCategoryId(

@@ -32,6 +32,9 @@ public class ExpenseCreateRequestDTO {
             example = "Grocery shopping at BigBasket")
     private String spentOn;
 
+    @Builder.Default
+    private String currency = "₹";
+
     @NotNull(message = "Amount is mandatory")
     @DecimalMin(value = "0.0", inclusive = true, message = "Amount cannot be negative")
     @Schema(description = "Amount spent; zero or positive only", example = "499.99", requiredMode = Schema.RequiredMode.REQUIRED)
