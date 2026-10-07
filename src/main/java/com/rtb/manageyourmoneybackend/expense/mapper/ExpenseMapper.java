@@ -28,7 +28,6 @@ public interface ExpenseMapper {
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "synced", ignore = true)
-    @Mapping(target = "created", ignore = true)
     @Mapping(target = "modified", ignore = true)
     void updateEntityFromDto(ExpenseUpdateRequestDTO dto, @MappingTarget Expense entity);
 

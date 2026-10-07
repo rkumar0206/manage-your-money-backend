@@ -51,7 +51,7 @@ public class Expense {
     private UserEntity user;
 
     //@CreationTimestamp
-    @Column(name = "created", nullable = false, updatable = false)
+    @Column(name = "created", nullable = false)
     private Instant created;
 
     //@UpdateTimestamp
