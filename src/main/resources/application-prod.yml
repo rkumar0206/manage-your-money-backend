@@ -94,6 +94,7 @@ app:
     default-ttl: 30m
     enable-statistics: true
     ttls:
+      user: 60h
       expenseCategoryById: 60m
       expenseCategoryList: 15m
       expenseById:         30m
@@ -102,6 +103,8 @@ app:
       expensePaymentMethods: 1h
       unsplashSearchResult: 24h
       expenseDistinctSpentOn: 1h
+      paymentMethodsFiresStore: 24h
+      uid: 40h
   security:
     max-active-sessions: ${MAX_ACTIVE_SESSIONS:5}
 
@@ -119,3 +122,6 @@ jwt:
     roleMappings:
       - pattern: "/api/v1/admin/**"
         roles: ["ADMIN"]
+
+firebase:
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH}

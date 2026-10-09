@@ -108,6 +108,25 @@ jobs:
         uses: azure/setup-helm@v4
 
       # ------------------------------------------------------------------------
+      # 9b. Create Firebase service account secret
+      # ------------------------------------------------------------------------
+      - name: Create Firebase credentials secret
+        env:
+          FIREBASE_SA_B64: ${{ secrets.FIREBASE_SA_B64 }}
+        run: |
+          # Namespace must exist before the secret (Helm only creates it later)
+          kubectl create namespace mym-prod --dry-run=client -o yaml | kubectl apply -f -
+
+          echo "$FIREBASE_SA_B64" | base64 -d > "$RUNNER_TEMP/firebase-sa.json"
+
+          kubectl create secret generic firebase-credentials \
+            --namespace mym-prod \
+            --from-file=serviceAccount.json="$RUNNER_TEMP/firebase-sa.json" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          rm -f "$RUNNER_TEMP/firebase-sa.json"
+
+      # ------------------------------------------------------------------------
       # 10. Deploy via Helm (Handles Namespace, Secrets, and Application)
       # ------------------------------------------------------------------------
       - name: Deploy via Helm

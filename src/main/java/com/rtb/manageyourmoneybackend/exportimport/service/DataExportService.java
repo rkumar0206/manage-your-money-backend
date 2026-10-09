@@ -92,6 +92,7 @@ public class DataExportService {
     private void writeCategory(JsonGenerator generator, ExpenseCategory category) {
         try {
             generator.writeObject(new CategoryExportDto(
+                    category.getKey(),
                     category.getName(),
                     category.getDescription(),
                     category.getImageUrl(),
@@ -107,6 +108,9 @@ public class DataExportService {
     private void writeExpense(JsonGenerator generator, Expense expense) {
         try {
             generator.writeObject(new ExpenseExportDto(
+                    expense.getKey(),
+                    expense.getCurrency(),
+                    expense.getCategoryKey(),
                     expense.getSpentOn(),
                     expense.getAmount(),
                     expense.getCategory().getName(), // Mapped via Category Name

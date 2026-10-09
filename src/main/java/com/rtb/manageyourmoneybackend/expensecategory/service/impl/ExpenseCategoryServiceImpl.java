@@ -8,13 +8,17 @@ import com.rtb.manageyourmoneybackend.common.model.PageResponse;
 import com.rtb.manageyourmoneybackend.common.util.CommonAppUtil;
 import com.rtb.manageyourmoneybackend.expense.dto.CategoryExpenseSummary;
 import com.rtb.manageyourmoneybackend.expense.repository.ExpenseRepository;
+import com.rtb.manageyourmoneybackend.expensecategory.adapter.ExpenseCategoryAdapter;
 import com.rtb.manageyourmoneybackend.expensecategory.dto.*;
 import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
 import com.rtb.manageyourmoneybackend.expensecategory.mapper.ExpenseCategoryMapper;
 import com.rtb.manageyourmoneybackend.expensecategory.repository.ExpenseCategoryRepository;
 import com.rtb.manageyourmoneybackend.expensecategory.service.ExpenseCategoryService;
+import com.rtb.manageyourmoneybackend.firebase.models.CategoryItem;
+import com.rtb.manageyourmoneybackend.firebase.sevice.FirestoreService;
 import com.rtb.manageyourmoneybackend.user.model.UserEntity;
 import com.rtb.manageyourmoneybackend.user.repository.UserRepository;
+import com.rtb.manageyourmoneybackend.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -25,12 +29,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +59,8 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     private final ExpenseCategoryMapper expenseCategoryMapper;
     private final ExpenseRepository expenseRepository;
     private final CacheEvictionService cacheEvictionService;
+    private final FirestoreService firestoreService;
+    private final UserService userService;
 
     private static final String[] CATEGORY_USER_CACHES = {
             CacheNameConstants.EXPENSE_CATEGORY_BY_ID,
@@ -79,7 +88,8 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
         ExpenseCategory entity = expenseCategoryMapper.toEntity(request);
 
         entity.setName(normalizedName);
-        entity.setSynced(true);
+        entity.setSynced(false);
+        entity.setKey(UUID.randomUUID().toString());
 
         if (entity.getCreated() == null) {
             entity.setCreated(Instant.now());
@@ -93,6 +103,8 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
 
         try {
             ExpenseCategory saved = expenseCategoryRepository.save(entity);
+
+            uploadToFirestore(userId, saved, false);
             ExpenseCategoryResponseDTO responseDto = expenseCategoryMapper.toResponseDto(saved);
             responseDto.setTotalExpenseAmount(BigDecimal.valueOf(0.0));
             evictUserCaches(userId);
@@ -196,6 +208,9 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
         entity.setModified(Instant.now());
 
         ExpenseCategory saved = expenseCategoryRepository.save(entity);
+
+        uploadToFirestore(userId, saved, true);
+
         ExpenseCategoryResponseDTO responseDto = expenseCategoryMapper.toResponseDto(saved);
         responseDto.setTotalExpenseAmount(expenseRepository.sumAmountByUserIdAndCategoryId(userId, responseDto.getId()));
         evictUserCaches(userId);
@@ -209,11 +224,43 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
         CommonAppUtil.validateIdField(userId, "userId");
         CommonAppUtil.validateIdField(id, "id");
 
-        if (!expenseCategoryRepository.existsByIdAndUser_Id(id, userId)) {
+        Optional<ExpenseCategory> byIdAndUserId = expenseCategoryRepository.findByIdAndUser_Id(id, userId);
+        if (byIdAndUserId.isEmpty()) {
             throw ResourceNotFoundException.of("ExpenseCategory", id);
         }
         expenseCategoryRepository.deleteById(id);
+        deleteFromFirestore(byIdAndUserId.get().getKey());
         evictUserCaches(userId);
+    }
+
+    private void uploadToFirestore(Long userId, ExpenseCategory expenseCategory, boolean update) {
+
+        // save to firestore
+        try {
+            String email = userService.getCurrentUserDetails(userId).email();
+
+            String uid = email.equalsIgnoreCase("rkumar0206mnirks@gmail.com")
+                    ? "IgkfuqhwpZh2CIXjdqZKxzxbe4j1"
+                    : firestoreService.getUid(email);
+
+            if (!StringUtils.hasText(uid)) {
+                return;
+            }
+
+            firestoreService.save(ExpenseCategoryAdapter.toCategoryItem(uid, expenseCategory), update);
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Unable to upload to firestore", e);
+        }
+    }
+
+    private void deleteFromFirestore(String key) {
+
+        // save to firestore
+        try {
+            firestoreService.delete(CategoryItem.class, key);
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Unable to delete item from firestore", e);
+        }
     }
 
     private ExpenseCategory findEntityOrThrow(Long id, Long userId) {

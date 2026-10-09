@@ -22,6 +22,8 @@ public interface ExpenseMapper {
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "isSynced", ignore = true)
     @Mapping(target = "modified", ignore = true)
+    @Mapping(target = "key", ignore = true)
+    @Mapping(target = "categoryKey", ignore = true)
     Expense toEntity(ExpenseCreateRequestDTO dto);
 
     @Mapping(target = "id", ignore = true)
@@ -29,6 +31,8 @@ public interface ExpenseMapper {
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "synced", ignore = true)
     @Mapping(target = "modified", ignore = true)
+    @Mapping(target = "categoryKey", ignore = true)
+    @Mapping(target = "key", ignore = true)
     void updateEntityFromDto(ExpenseUpdateRequestDTO dto, @MappingTarget Expense entity);
 
     @Mapping(target = "categoryId", source = "category.id")

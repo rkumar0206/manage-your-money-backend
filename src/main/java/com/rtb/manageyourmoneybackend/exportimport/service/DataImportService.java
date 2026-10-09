@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rtb.manageyourmoneybackend.common.cache.CacheEvictionService;
-import com.rtb.manageyourmoneybackend.common.cache.CacheNameConstants;
 import com.rtb.manageyourmoneybackend.expense.entity.Expense;
 import com.rtb.manageyourmoneybackend.expense.repository.ExpenseRepository;
 import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
@@ -17,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedInputStream;
@@ -102,6 +102,7 @@ public class DataImportService {
                             existing.setSynced(dto.isSynced());
                             existing.setCreated(dto.created());
                             existing.setModified(dto.modified());
+                            existing.setKey(dto.key());
                             return existing;
                         })
                         .orElseGet(() -> ExpenseCategory.builder()
@@ -112,6 +113,7 @@ public class DataImportService {
                                 .user(userRef)
                                 .created(dto.created())
                                 .modified(dto.modified())
+                                .key(dto.key())
                                 .build());
 
                 ExpenseCategory saved = categoryRepository.save(category);
@@ -168,6 +170,9 @@ public class DataImportService {
 
                 if (!existingFingerprints.contains(fingerprint)) {
                     Expense expense = Expense.builder()
+                            .key(dto.key())
+                            .currency(StringUtils.hasText(dto.currency()) ? dto.currency() : "₹")
+                            .categoryKey(dto.categoryKey())
                             .spentOn(dto.spentOn())
                             .amount(dto.amount())
                             .category(category)
@@ -193,6 +198,7 @@ public class DataImportService {
         return categoryId + ":"
                 + dto.amount() + ":"
                 + (dto.spentOn() != null ? dto.spentOn() : "") + ":"
+                + dto.key() + ":"
                 + dto.created();
     }
 

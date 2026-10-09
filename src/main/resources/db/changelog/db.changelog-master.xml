@@ -12,4 +12,6 @@
     <include file="/db/changelog/changes/expense/expense-search-indexes.xml"/>
     <include file="db/changelog/changes/users/002-add-revoked-and-created-at-to-refresh-tokens.xml"/>
     <include file="db/changelog/changes/expense/02-add-currency.xml"/>
+    <include file="db/changelog/changes/category/03-add-key-column.xml"/>
+    <include file="db/changelog/changes/expense/03-add-key-column.xml"/>
 </databaseChangeLog>

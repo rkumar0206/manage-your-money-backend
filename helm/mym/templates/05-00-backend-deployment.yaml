@@ -27,6 +27,12 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: {{ .Values.app.env.SPRING_PROFILES_ACTIVE }}
+            - name: FIREBASE_CREDENTIALS_PATH
+              value: /etc/firebase/serviceAccount.json
+          volumeMounts:
+            - name: firebase-credentials
+              mountPath: /etc/firebase
+              readOnly: true
           envFrom:
             - configMapRef:
                 name: mym-backend-config
@@ -47,3 +53,7 @@ spec:
             httpGet: {path: {{ .Values.app.probes.liveness.path }}, port: {{ .Values.app.image.containerPort }}}
             initialDelaySeconds: {{ .Values.app.probes.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.app.probes.liveness.periodSeconds }}
+      volumes:
+        - name: firebase-credentials
+          secret:
+            secretName: {{ .Values.firebase.existingSecret }}

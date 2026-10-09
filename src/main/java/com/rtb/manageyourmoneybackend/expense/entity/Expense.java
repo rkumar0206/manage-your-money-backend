@@ -46,6 +46,12 @@ public class Expense {
     @Column(name = "is_synced", nullable = false)
     private boolean isSynced;
 
+    @Column(name = "key", length = 100)
+    private String key;
+
+    @Column(name = "category_key", length = 100)
+    private String categoryKey;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;

@@ -4,6 +4,7 @@ import com.rtb.manageyourmoneybackend.common.cache.CacheEvictionService;
 import com.rtb.manageyourmoneybackend.common.cache.CacheNameConstants;
 import com.rtb.manageyourmoneybackend.common.exception.ResourceNotFoundException;
 import com.rtb.manageyourmoneybackend.common.model.PageResponse;
+import com.rtb.manageyourmoneybackend.expense.adapter.ExpenseAdapter;
 import com.rtb.manageyourmoneybackend.expense.dto.*;
 import com.rtb.manageyourmoneybackend.expense.entity.Expense;
 import com.rtb.manageyourmoneybackend.expense.filter.DateRangePreset;
@@ -14,8 +15,11 @@ import com.rtb.manageyourmoneybackend.expense.service.helper.ExpenseCacheDelegat
 import com.rtb.manageyourmoneybackend.expense.specification.ExpenseSpecifications;
 import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
 import com.rtb.manageyourmoneybackend.expensecategory.repository.ExpenseCategoryRepository;
+import com.rtb.manageyourmoneybackend.firebase.models.ExpenseItem;
+import com.rtb.manageyourmoneybackend.firebase.sevice.FirestoreService;
 import com.rtb.manageyourmoneybackend.user.model.UserEntity;
 import com.rtb.manageyourmoneybackend.user.repository.UserRepository;
+import com.rtb.manageyourmoneybackend.user.service.UserService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -28,12 +32,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.*;
 import java.time.format.TextStyle;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static com.rtb.manageyourmoneybackend.common.util.CommonAppUtil.toBigDecimal;
@@ -52,6 +58,8 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final EntityManager entityManager;
     private final CacheEvictionService cacheEvictionService;
     private final ExpenseCacheDelegate expenseCacheDelegate;
+    private final UserService userService;
+    private final FirestoreService firestoreService;
 
     private static final String[] EXPENSE_USER_CACHES = {
             CacheNameConstants.EXPENSE_BY_ID,
@@ -78,8 +86,14 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setCreated(request.getCreated() != null ? request.getCreated() : Instant.now());
         expense.setModified(Instant.now());
 
+        expense.setKey(UUID.randomUUID().toString());
+        expense.setCategoryKey(category.getKey());
+
         category.setModified(Instant.now());
         Expense saved = expenseRepository.save(expense);
+
+        uploadToFirestore(userId, saved, false);
+
         expenseCategoryRepository.saveAndFlush(category);
         evictUserCaches(userId);
         return expenseMapper.toResponseDto(saved);
@@ -94,8 +108,21 @@ public class ExpenseServiceImpl implements ExpenseService {
         ExpenseResponseDTO dto = expenseCacheDelegate.findByIdCached(userId, id);
 
         if (dto == null) {
-             throw new ResourceNotFoundException("Expense not found with id: " + id + " for current user");
+            throw new ResourceNotFoundException("Expense not found with id: " + id + " for current user");
         }
+
+//        try {
+//            List<PaymentMethodItem> paymentMethods = firestoreService.getPaymentMethods(
+//                    firestoreService.getUid(
+//                            "ak8987607666@gmail.com"
+//                    )
+//            );
+//
+//            log.info("Payment methods found for current user: {}", paymentMethods);
+//
+//        } catch (ExecutionException | InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
 
         return dto;
     }
@@ -507,6 +534,8 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.getCategory().setModified(Instant.now());
 
         Expense updated = expenseRepository.save(expense);
+        uploadToFirestore(userId, updated, true);
+
         evictUserCaches(userId);
         return expenseMapper.toResponseDto(updated);
     }
@@ -518,11 +547,45 @@ public class ExpenseServiceImpl implements ExpenseService {
         validateIdField(userId, "userId");
         validateIdField(id, "id");
 
-        if (!expenseRepository.existsByIdAndUserId(id, userId)) {
+        Optional<Expense> byIdAndUserId = expenseRepository.findByIdAndUserId(id, userId);
+        if (byIdAndUserId.isEmpty()) {
             throw new ResourceNotFoundException("Expense not found with id: " + id + " for current user");
         }
         expenseRepository.deleteById(id);
+        deleteFromFirestore(byIdAndUserId.get().getKey());
         evictUserCaches(userId);
+    }
+
+    private void uploadToFirestore(Long userId, Expense expense, boolean update) {
+
+        // save to firestore
+        try {
+            String email = userService.getCurrentUserDetails(userId).email();
+
+            String uid = email.equalsIgnoreCase("rkumar0206mnirks@gmail.com")
+                    ? "IgkfuqhwpZh2CIXjdqZKxzxbe4j1"
+                    : firestoreService.getUid(email);
+
+            if (!StringUtils.hasText(uid)) {
+                return;
+            }
+
+            firestoreService.save(ExpenseAdapter.toExpenseItem(
+                    uid, expense, firestoreService.getPaymentMethods(uid)
+            ), update);
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Unable to upload to firestore", e);
+        }
+    }
+
+    private void deleteFromFirestore(String key) {
+
+        // save to firestore
+        try {
+            firestoreService.delete(ExpenseItem.class, key);
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Unable to delete item from firestore", e);
+        }
     }
 
     private Expense findOwnedOrThrow(Long userId, Long id) {

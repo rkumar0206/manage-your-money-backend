@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="add-key-column" author="rohit kumar">
+        <addColumn tableName="expenses">
+            <column name="key" type="VARCHAR(100)" defaultValue="₹">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="expenses" columnName="key"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="add-category_key-column" author="rohit kumar">
+        <addColumn tableName="expenses">
+            <column name="category_key" type="VARCHAR(100)" defaultValue="₹">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="expenses" columnName="category_key"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

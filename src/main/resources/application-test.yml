@@ -94,14 +94,17 @@ app:
     default-ttl: 30m
     enable-statistics: true
     ttls:
-      expenseCategoryById: 60m
-      expenseCategoryList: 15m
-      expenseById:         30m
-      expenseList:         10m
+      user: 1m
+      expenseCategoryById: 6m
+      expenseCategoryList: 1m
+      expenseById:         3m
+      expenseList:         1m
       expenseAggregates:    5m
-      expensePaymentMethods: 1h
-      unsplashSearchResult: 24h
-      expenseDistinctSpentOn: 30m
+      expensePaymentMethods: 1m
+      unsplashSearchResult: 2m
+      expenseDistinctSpentOn: 3m
+      uid: 1m
+      paymentMethodsFiresStore: 3m
   security:
     max-active-sessions: ${MAX_ACTIVE_SESSIONS:5}
 
@@ -122,3 +125,6 @@ jwt:
     roleMappings:
       - pattern: "/api/v1/admin/**"
         roles: ["ADMIN"]
+
+firebase:
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH:/Users/rohitkumar/Documents/manageyourrenters-7d1bb66484d6.json}

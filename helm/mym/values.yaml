@@ -162,3 +162,7 @@ ingress:
 #  tls:
 #    enabled: true
 #    secretName: mym-tls-secret
+
+
+firebase:
+  existingSecret: firebase-credentials

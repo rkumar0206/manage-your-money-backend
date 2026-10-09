@@ -1,5 +1,6 @@
 package com.rtb.manageyourmoneybackend.user.service;
 
+import com.rtb.manageyourmoneybackend.common.cache.CacheNameConstants;
 import com.rtb.manageyourmoneybackend.user.CustomUserDetails;
 import com.rtb.manageyourmoneybackend.user.dto.EditRoleRequestDTO;
 import com.rtb.manageyourmoneybackend.user.dto.UserResponse;
@@ -8,6 +9,7 @@ import com.rtb.manageyourmoneybackend.user.model.UserEntity;
 import com.rtb.manageyourmoneybackend.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -32,6 +34,10 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     }
 
     @Override
+    @Cacheable(
+            cacheNames = CacheNameConstants.USER,
+            key = "'cuurent-user-details-by-id-' + #id"
+    )
     public UserResponse getCurrentUserDetails(Long id) {
         return userRepository.findById(id)
                 .map(u -> new UserResponse(u.getUsername(), u.getEmail(), u.isEnabled(), u.getRoles()))
