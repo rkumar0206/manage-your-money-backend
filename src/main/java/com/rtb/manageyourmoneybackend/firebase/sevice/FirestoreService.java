@@ -63,8 +63,6 @@ public class FirestoreService {
     public void save(String collection, String id, Map<String, Object> data, boolean merge)
             throws ExecutionException, InterruptedException {
 
-        log.info("Saving data for collection: {} with data: {}", collection, data);
-
         DocumentReference ref = firestore.collection(collection).document(id);
         WriteResult result = merge ? ref.set(data, SetOptions.merge()).get()
                 : ref.set(data).get();

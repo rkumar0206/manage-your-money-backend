@@ -562,7 +562,7 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         // save to firestore
         try {
-            String email = userService.getCurrentUserDetails(userId).email();
+            String email = userService.getCurrentUserDetails(userId).getEmail();
 
             String uid = email.equalsIgnoreCase("rkumar0206mnirks@gmail.com")
                     ? "IgkfuqhwpZh2CIXjdqZKxzxbe4j1"

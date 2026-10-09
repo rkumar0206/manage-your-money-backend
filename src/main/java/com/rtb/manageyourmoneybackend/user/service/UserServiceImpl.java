@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -36,11 +37,11 @@ public class UserServiceImpl implements UserDetailsService, UserService {
     @Override
     @Cacheable(
             cacheNames = CacheNameConstants.USER,
-            key = "'cuurent-user-details-by-id-' + #id"
+            key = "'current-user-details-by-id-' + #id"
     )
     public UserResponse getCurrentUserDetails(Long id) {
         return userRepository.findById(id)
-                .map(u -> new UserResponse(u.getUsername(), u.getEmail(), u.isEnabled(), u.getRoles()))
+                .map(u -> new UserResponse(u.getUsername(), u.getEmail(), u.isEnabled(), new HashSet<>(u.getRoles())))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with identifier: " + id));
     }
 
