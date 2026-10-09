@@ -530,8 +530,10 @@ public class ExpenseServiceImpl implements ExpenseService {
             expense.setCategory(resolveCategory(userId, request.getCategoryId()));
         }
 
+        ExpenseCategory category = expense.getCategory();
         expense.setModified(Instant.now());
-        expense.getCategory().setModified(Instant.now());
+        expense.setCategoryKey(category.getKey());
+        category.setModified(Instant.now());
 
         Expense updated = expenseRepository.save(expense);
         uploadToFirestore(userId, updated, true);
