@@ -1,7 +1,6 @@
 package com.rtb.manageyourmoneybackend.user.service;
 
-import com.rksdev.security.api.PluggableUserRegistrationHandler;
-import com.rksdev.security.dto.SignUpRequest;
+import com.rtb.manageyourmoneybackend.user.dto.AppSignUpRequest;
 import com.rtb.manageyourmoneybackend.user.enums.Roles;
 import com.rtb.manageyourmoneybackend.user.model.UserEntity;
 import com.rtb.manageyourmoneybackend.user.repository.UserRepository;
@@ -16,14 +15,13 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class AppRegistrationHandler implements PluggableUserRegistrationHandler {
+public class AppRegistrationHandler {
 
     private final UserRepository userRepository;
     private final EmailService emailService;
 
-    @Override
     @Transactional
-    public Object handleUserSignUp(SignUpRequest request) {
+    public Object handleUserSignUp(AppSignUpRequest request, String encodedPassword) {
         // 1. Enforce unique constraints gracefully
         if (userRepository.findByUsername(request.username()).isPresent()) {
             throw new IllegalArgumentException("Username is already taken.");
@@ -36,8 +34,9 @@ public class AppRegistrationHandler implements PluggableUserRegistrationHandler 
         UserEntity user = UserEntity.builder()
                 .username(request.username())
                 .email(request.email())
-                .password(request.password()) // Note: Password is already pre-hashed by the library controller
-                .roles(Set.of(Roles.REGULAR_USER.getValue())) // Standard default authorization level
+                .fullName(request.fullName())
+                .password(encodedPassword)
+                .roles(Set.of(Roles.REGULAR_USER.getValue()))
                 .enabled(false)
                 .build();
 

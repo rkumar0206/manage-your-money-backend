@@ -2,8 +2,11 @@ package com.rtb.manageyourmoneybackend.user.repository;
 
 import com.rtb.manageyourmoneybackend.user.model.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -27,4 +30,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     Optional<UserEntity> findByUsernameOrEmail(String username, String email);
 
     Optional<UserEntity> findByVerificationToken(String token);
+
+    // search UI (Partial Match / Autocomplete)
+    @Query("SELECT u FROM UserEntity u WHERE (LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))) AND u.id <> :userId")
+    List<UserEntity> searchByUsernameOrEmail(@Param("query") String query, @Param("userId") Long userId);
 }

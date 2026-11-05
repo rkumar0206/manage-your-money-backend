@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- =====================================================================================
+         TABLE: expense_groups
+         ===================================================================================== -->
+    <changeSet id="001-1-create-expense-groups" author="rohit">
+        <createTable tableName="expense_groups">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_expense_groups"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Audit Columns -->
+            <column name="created" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="expense_groups" baseColumnNames="user_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_expense_groups_on_users" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="expense_groups" baseColumnNames="created_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_expense_groups_created_by"/>
+
+        <createIndex tableName="expense_groups" indexName="idx_expense_groups_user">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- =====================================================================================
+         TABLE: group_members
+         ===================================================================================== -->
+    <changeSet id="001-2-create-group-members" author="rohit">
+        <createTable tableName="group_members">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_group_members"/>
+            </column>
+            <column name="group_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Nullable: Allows dummy users who don't have an account -->
+            <column name="user_id" type="bigint">
+                <constraints nullable="true"/>
+            </column>
+            <!-- Required: Display name (e.g., "Rohit" or "Alice (Guest)") -->
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="joined_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Audit Columns -->
+            <column name="created_by" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="group_members" baseColumnNames="group_id"
+                                 referencedTableName="expense_groups" referencedColumnNames="id"
+                                 constraintName="fk_group_members_on_expense_groups" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="group_members" baseColumnNames="user_id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_group_members_on_users" onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint baseTableName="group_members" baseColumnNames="created_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_group_members_created_by"/>
+
+        <!-- Ensure a registered user is only added once per group (NULLs are allowed multiple times) -->
+        <addUniqueConstraint tableName="group_members" columnNames="group_id, user_id" constraintName="uq_group_members_group_user"/>
+
+        <createIndex tableName="group_members" indexName="idx_group_members_group">
+            <column name="group_id"/>
+        </createIndex>
+        <createIndex tableName="group_members" indexName="idx_group_members_user">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- =====================================================================================
+         TABLE: split_expenses
+         ===================================================================================== -->
+    <changeSet id="001-3-create-split-expenses" author="rohit">
+        <createTable tableName="split_expenses">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_split_expenses"/>
+            </column>
+            <column name="group_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Links to the specific member, not the user directly -->
+            <column name="paid_by_member_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="decimal(19, 2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expense_date" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Audit Columns -->
+            <column name="created" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="split_expenses" baseColumnNames="group_id"
+                                 referencedTableName="expense_groups" referencedColumnNames="id"
+                                 constraintName="fk_split_expenses_on_expense_groups" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="split_expenses" baseColumnNames="paid_by_member_id"
+                                 referencedTableName="group_members" referencedColumnNames="id"
+                                 constraintName="fk_split_expenses_on_group_members" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="split_expenses" baseColumnNames="created_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_split_expenses_created_by"/>
+
+        <createIndex tableName="split_expenses" indexName="idx_split_expenses_group">
+            <column name="group_id"/>
+        </createIndex>
+        <createIndex tableName="split_expenses" indexName="idx_split_expenses_member">
+            <column name="paid_by_member_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- =====================================================================================
+         TABLE: split_expense_shares
+         ===================================================================================== -->
+    <changeSet id="001-4-create-split-expense-shares" author="rohit">
+        <createTable tableName="split_expense_shares">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_split_expense_shares"/>
+            </column>
+            <column name="split_expense_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="member_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="decimal(19, 2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="split_expense_shares" baseColumnNames="split_expense_id"
+                                 referencedTableName="split_expenses" referencedColumnNames="id"
+                                 constraintName="fk_split_expense_shares_on_split_expenses" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="split_expense_shares" baseColumnNames="member_id"
+                                 referencedTableName="group_members" referencedColumnNames="id"
+                                 constraintName="fk_split_expense_shares_on_group_members" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="split_expense_shares" baseColumnNames="created_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_split_expense_shares_created_by"/>
+
+        <createIndex tableName="split_expense_shares" indexName="idx_split_expense_shares_expense">
+            <column name="split_expense_id"/>
+        </createIndex>
+        <createIndex tableName="split_expense_shares" indexName="idx_split_expense_shares_member">
+            <column name="member_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- =====================================================================================
+         TABLE: settlements
+         ===================================================================================== -->
+    <changeSet id="001-5-create-settlements" author="rohit">
+        <createTable tableName="settlements">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_settlements"/>
+            </column>
+            <column name="group_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paid_by_member_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paid_to_member_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="decimal(19, 2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="settlement_date" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Audit Columns -->
+            <column name="created" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="settlements" baseColumnNames="group_id"
+                                 referencedTableName="expense_groups" referencedColumnNames="id"
+                                 constraintName="fk_settlements_on_expense_groups" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="settlements" baseColumnNames="paid_by_member_id"
+                                 referencedTableName="group_members" referencedColumnNames="id"
+                                 constraintName="fk_settlements_on_group_members_paid_by" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="settlements" baseColumnNames="paid_to_member_id"
+                                 referencedTableName="group_members" referencedColumnNames="id"
+                                 constraintName="fk_settlements_on_group_members_paid_to" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="settlements" baseColumnNames="created_by"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 constraintName="fk_settlements_created_by"/>
+
+        <createIndex tableName="settlements" indexName="idx_settlements_group">
+            <column name="group_id"/>
+        </createIndex>
+        <createIndex tableName="settlements" indexName="idx_settlements_paid_by">
+            <column name="paid_by_member_id"/>
+        </createIndex>
+        <createIndex tableName="settlements" indexName="idx_settlements_paid_to">
+            <column name="paid_to_member_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
