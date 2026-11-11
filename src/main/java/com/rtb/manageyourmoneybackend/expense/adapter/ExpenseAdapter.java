@@ -44,10 +44,10 @@ public class ExpenseAdapter {
             if (pmLower.contains("other")) {
                 keys.add("payment_method_other_6546332_rrrrr");
             }
-            if (pmLower.contains("debit card")) {
+            if (pmLower.contains("debit card") || pmLower.contains("debit_card")) {
                 keys.add("payment_method_debit_card_5765763_rrrrr");
             }
-            if (pmLower.contains("credit card")) {
+            if (pmLower.contains("credit card") || pmLower.contains("credit_card")) {
                 keys.add("payment_method_credit_card_974673_rrrrr");
             }
         }

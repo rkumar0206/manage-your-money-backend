@@ -1,5 +1,6 @@
 package com.rtb.manageyourmoneybackend.firebase.sevice;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
@@ -104,6 +105,42 @@ public class FirestoreService {
             result.add(item);
         }
         return result;
+    }
+
+    public List<String> updateAndGetMatchingDocumentIds(String targetUid, long minTimestamp)
+            throws ExecutionException, InterruptedException {
+
+        // 1. Build and execute the query
+        ApiFuture<QuerySnapshot> querySnapshotFuture = firestore.collection("Expenses")
+                .whereEqualTo("uid", targetUid)
+                .whereGreaterThan("modified", minTimestamp)
+                .get();
+
+        QuerySnapshot querySnapshot = querySnapshotFuture.get();
+
+        List<String> documentIds = new ArrayList<>();
+
+        // If no documents matched, return early
+        if (querySnapshot.isEmpty()) {
+            return documentIds;
+        }
+
+        // 2. Initialize a WriteBatch for atomic updates
+        WriteBatch batch = firestore.batch();
+
+        // 3. Iterate through matching documents, collect IDs, and add update operations to batch
+        for (QueryDocumentSnapshot doc : querySnapshot.getDocuments()) {
+            String docId = doc.getId();
+            documentIds.add(docId);
+
+            DocumentReference docRef = doc.getReference();
+            batch.update(docRef, "key", docId);
+        }
+
+        // 4. Commit the batch update and wait for completion
+        batch.commit().get();
+
+        return documentIds;
     }
 
     @Cacheable(

@@ -20,7 +20,7 @@ public final class FirestoreMapper {
             for (Field f : allFields(model.getClass())) {
                 int mod = f.getModifiers();
                 if (Modifier.isStatic(mod) || Modifier.isTransient(mod)) continue;
-                if (f.isAnnotationPresent(FirestoreId.class)) continue; // ID is the doc key, not a field
+                //if (f.isAnnotationPresent(FirestoreId.class)) continue; // ID is the doc key, not a field
                 f.setAccessible(true);
                 map.put(f.getName(), convert(f.get(model)));
             }
