@@ -147,8 +147,7 @@ public class FirestoreService {
             cacheNames = CacheNameConstants.PAYMENT_METHODS_FIRESTORE,
             key = "'payment-methods-uid-' + #uid"
     )
-    public List<PaymentMethodItem> getPaymentMethods(String uid)
-            throws ExecutionException, InterruptedException {
+    public List<PaymentMethodItem> getPaymentMethods(String uid) throws ExecutionException, InterruptedException {
         return findAllByUid(PaymentMethodItem.class, uid);
     }
 }

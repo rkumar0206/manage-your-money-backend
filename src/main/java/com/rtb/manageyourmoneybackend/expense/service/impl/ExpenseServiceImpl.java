@@ -16,6 +16,7 @@ import com.rtb.manageyourmoneybackend.expense.specification.ExpenseSpecification
 import com.rtb.manageyourmoneybackend.expensecategory.entity.ExpenseCategory;
 import com.rtb.manageyourmoneybackend.expensecategory.repository.ExpenseCategoryRepository;
 import com.rtb.manageyourmoneybackend.firebase.models.ExpenseItem;
+import com.rtb.manageyourmoneybackend.firebase.models.PaymentMethodItem;
 import com.rtb.manageyourmoneybackend.firebase.sevice.FirestoreService;
 import com.rtb.manageyourmoneybackend.user.model.UserEntity;
 import com.rtb.manageyourmoneybackend.user.repository.UserRepository;
@@ -40,7 +41,6 @@ import java.time.*;
 import java.time.format.TextStyle;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 import static com.rtb.manageyourmoneybackend.common.util.CommonAppUtil.toBigDecimal;
 import static com.rtb.manageyourmoneybackend.common.util.CommonAppUtil.validateIdField;
@@ -148,15 +148,45 @@ public class ExpenseServiceImpl implements ExpenseService {
     @Cacheable(cacheNames = CacheNameConstants.EXPENSE_PAYMENT_METHODS, key = "#userId")
     public PaymentMethodsResponse getDistinctPaymentMethods(Long userId) {
         validateIdField(userId, "userId");
-        return new PaymentMethodsResponse(
-                expenseRepository.findPaymentMethodsByUserId(userId).stream()
-                        .filter(Objects::nonNull)
-                        .flatMap(List::stream)
-                        .filter(method -> method != null && !method.isBlank())
-                        .collect(Collectors.toCollection(TreeSet::new))
-                        .stream()
-                        .toList()
-        );
+
+        // 1. Resolve UID based on email
+        String email = userService.getCurrentUserDetails(userId).getEmail();
+        String uid = "rkumar0206mnirks@gmail.com".equalsIgnoreCase(email)
+                ? "IgkfuqhwpZh2CIXjdqZKxzxbe4j1"
+                : firestoreService.getUid(email);
+
+        // 2. Collect distinct payment methods into a Set
+        Set<String> distinctMethods = new HashSet<>();
+
+        // Add payment methods from repository
+        List<List<String>> repoPaymentLists = expenseRepository.findPaymentMethodsByUserId(userId);
+        if (repoPaymentLists != null) {
+            repoPaymentLists.stream()
+                    .filter(Objects::nonNull)
+                    .flatMap(List::stream)
+                    .filter(StringUtils::hasText)
+                    .forEach(distinctMethods::add);
+        }
+
+        // Add payment methods from Firestore
+        if (StringUtils.hasText(uid)) {
+            List<PaymentMethodItem> firestoreItems = List.of();
+            try {
+                firestoreItems = firestoreService.getPaymentMethods(uid);
+            } catch (ExecutionException | InterruptedException e) {
+                log.error("Error retrieving firestore items for uid {}", uid, e);
+            }
+
+            if (firestoreItems != null) {
+                firestoreItems.stream()
+                        .map(PaymentMethodItem::getPaymentMethod)
+                        .filter(StringUtils::hasText)
+                        .forEach(distinctMethods::add);
+            }
+        }
+
+        // 3. Return the unique items without sorting
+        return new PaymentMethodsResponse(distinctMethods.stream().toList());
     }
 
     @Override
